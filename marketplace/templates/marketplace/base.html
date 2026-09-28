@@ -1,0 +1,48 @@
+{% load static fa %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}خدمات جانبی کشاورزی{% endblock %} | کشت‌کاران</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌿%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static '/css/output.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-slate-50 pb-20 font-sans text-slate-800 antialiased lg:pb-0">
+  <a href="#content" class="sr-only focus:not-sr-only focus:absolute focus:right-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2">رفتن به محتوا</a>
+  {% include "marketplace/partials/header.html" %}
+  {% if current_profile.role == 'farmer' and current_profile.completion_percent < 100 %}
+    <a href="{% url 'farmer_profile' %}" class="block bg-amber-50 px-4 py-2 text-center text-sm text-amber-900">
+      پروفایل زمین {{ current_profile.completion_percent|fa_digits }}٪ کامل است. شهر و آدرس زمین را ثبت کنید.
+    </a>
+  {% elif current_profile.role == 'worker' and current_profile.completion_percent < 100 %}
+    <a href="{% url 'worker_profile' %}" class="block bg-amber-50 px-4 py-2 text-center text-sm text-amber-900">
+      پروفایل کاری {{ current_profile.completion_percent|fa_digits }}٪ کامل است.
+    </a>
+  {% endif %}
+  {% if messages %}
+    <div class="mx-auto max-w-6xl px-4 pt-4">
+      {% for message in messages %}
+        <div class="mb-2 rounded-2xl px-4 py-3 text-sm {% if 'error' in message.tags %}bg-rose-50 text-rose-700{% elif 'warning' in message.tags %}bg-amber-50 text-amber-800{% elif 'info' in message.tags %}bg-sky-50 text-sky-800{% else %}bg-emerald-50 text-emerald-800{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  <main id="content">
+    {% block content %}{% endblock %}
+  </main>
+  {% include "marketplace/partials/footer.html" %}
+  {% include "marketplace/partials/bottom_nav.html" %}
+  <script>
+    const menuBtn = document.getElementById('menu-btn');
+    const menu = document.getElementById('mobile-menu');
+    if (menuBtn && menu) {
+      menuBtn.addEventListener('click', () => menu.classList.toggle('hidden'));
+    }
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

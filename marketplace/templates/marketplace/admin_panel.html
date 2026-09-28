@@ -1,0 +1,56 @@
+{% extends "marketplace/base.html" %}
+{% load fa %}
+{% block title %}پنل کارها{% endblock %}
+{% block content %}
+<section class="border-b border-teal-100 bg-teal-50">
+  <div class="mx-auto max-w-6xl px-4 py-8">
+    <h1 class="text-2xl font-extrabold">پنل ادمین</h1>
+    <p class="mt-2 text-sm text-slate-600">همه رزروها و مرحله‌ای که هر کار در آن است. تأیید نهایی انجام کار فقط از اینجا انجام می‌شود.</p>
+  </div>
+</section>
+<section class="mx-auto max-w-6xl px-4 py-8">
+  <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+    {% for item in filters %}
+      <a href="{% if item.value %}?status={{ item.value }}{% else %}{% url 'admin_panel' %}{% endif %}" class="shrink-0 rounded-full px-4 py-2 text-xs font-semibold {% if selected == item.value %}bg-teal-600 text-white{% else %}bg-white text-slate-600 shadow-sm{% endif %}">
+        {{ item.label }} ({{ item.count|fa_digits }})
+      </a>
+    {% endfor %}
+  </div>
+  <div class="mt-4 space-y-4">
+    {% for booking in page_obj %}
+      <article class="rounded-3xl bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 class="font-extrabold">{{ booking.service.name }}</h2>
+            <p class="mt-1 text-sm text-slate-500">
+              صاحب زمین: {{ booking.farmer.get_full_name }}
+              · کارگر: {{ booking.worker.profile.user.get_full_name }}
+              · {{ booking.city.name }}
+              · {{ booking.work_date|date:"Y/m/d"|fa_digits }}
+            </p>
+          </div>
+          <span class="rounded-full px-3 py-1 text-xs font-bold {{ booking.status_classes }}">{{ booking.get_status_display }}</span>
+        </div>
+        {% include "marketplace/partials/stages.html" %}
+        <p class="mt-3 text-sm leading-7 text-slate-600">{{ booking.address }}{% if booking.land_area %} · {{ booking.land_area|fa_digits }} هکتار{% endif %}</p>
+        {% if booking.note %}<p class="text-sm text-slate-500">{{ booking.note }}</p>{% endif %}
+        <p class="mt-2 text-sm font-semibold text-teal-700">{{ booking.wage|toman }} در روز</p>
+        {% if booking.confirmed_by %}
+          <p class="mt-2 text-xs text-slate-400">تأیید توسط {{ booking.confirmed_by.get_full_name }} در {{ booking.confirmed_at|date:"Y/m/d H:i"|fa_digits }}</p>
+        {% endif %}
+        {% if booking.status == 'reported' %}
+          <form method="post" action="{% url 'admin_confirm_done' booking.pk %}" class="mt-4">
+            {% csrf_token %}
+            <button type="submit" class="rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white hover:bg-teal-700">تأیید انجام کار</button>
+          </form>
+        {% endif %}
+      </article>
+    {% empty %}
+      <div class="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+        <p class="font-bold">کاری در این مرحله نیست.</p>
+      </div>
+    {% endfor %}
+  </div>
+  {% include "marketplace/partials/pagination.html" %}
+</section>
+{% endblock %}

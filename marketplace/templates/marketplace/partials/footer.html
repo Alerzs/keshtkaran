@@ -1,0 +1,37 @@
+<footer class="mt-16 border-t border-slate-200 bg-white">
+  <div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+    <div>
+      <a href="{% url 'home' %}" class="flex items-center gap-2 font-extrabold text-teal-700">
+        {% include "marketplace/partials/logo.html" %}
+        کشت‌کاران
+      </a>
+      <p class="mt-3 text-sm leading-7 text-slate-500">خدمات جانبی مزرعه را از کارگر همان حوزه و همان منطقه رزرو کنید.</p>
+    </div>
+    <div>
+      <h2 class="text-sm font-bold text-slate-800">دسترسی</h2>
+      <ul class="mt-3 space-y-2 text-sm text-slate-500">
+        <li><a class="hover:text-teal-700" href="{% url 'about' %}">درباره ما</a></li>
+        <li><a class="hover:text-teal-700" href="{% url 'register' %}">ثبت‌نام کارگران</a></li>
+        <li><a class="hover:text-teal-700" href="{% url 'faq' %}">پرسش‌های متداول</a></li>
+        <li><a class="hover:text-teal-700" href="{% url 'services' %}">همه خدمات</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2 class="text-sm font-bold text-slate-800">حوزه‌های کاری</h2>
+      <ul class="mt-3 space-y-2 text-sm text-slate-500">
+        {% for category in nav_categories %}
+          <li><a class="hover:text-teal-700" href="{{ category.get_absolute_url }}">{{ category.name }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h2 class="text-sm font-bold text-slate-800">ارتباط</h2>
+      <ul class="mt-3 space-y-2 text-sm text-slate-500">
+        <li><a class="hover:text-teal-700" href="tel:02191091091">۰۲۱–۹۱۰۹۱۰۹۱</a></li>
+        <li><a class="hover:text-teal-700" href="mailto:hello@keshtkaran.local">hello@keshtkaran.local</a></li>
+        <li>هماهنگی پرداخت مستقیم با کارگر، بعد از پذیرش رزرو</li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t border-slate-100 py-4 text-center text-xs text-slate-400">کشت‌کاران — خدمات جانبی کشاورزی</div>
+</footer>

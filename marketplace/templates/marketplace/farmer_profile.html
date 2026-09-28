@@ -1,0 +1,229 @@
+{% extends "marketplace/base.html" %}
+{% block title %}موقعیت زمین{% endblock %}
+{% block extra_head %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    .farm-pin { background: transparent; border: none; }
+    .farm-pin span {
+      display: block;
+      width: 18px;
+      height: 18px;
+      margin: 5px;
+      border: 3px solid #fff;
+      border-radius: 999px;
+      background: #0f766e;
+      box-shadow: 0 0 0 6px rgba(13, 148, 136, .28), 0 6px 14px rgba(15, 23, 42, .28);
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<section class="relative overflow-hidden border-b border-teal-100 bg-linear-to-b from-teal-50 to-slate-50">
+  <div class="pointer-events-none absolute -top-20 left-0 h-56 w-56 rounded-full bg-emerald-200/70 blur-3xl"></div>
+  <div class="relative mx-auto flex max-w-6xl items-center gap-4 px-4 py-8">
+    <div class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-emerald-600 text-white shadow-md">
+      <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 10l8-6 8 6v9H4v-9z"/><path d="M9 19v-5h6v5"/></svg>
+    </div>
+    <div>
+      <p class="text-xs font-bold text-teal-700">پروفایل زمین</p>
+      <h1 class="mt-1 text-2xl font-extrabold text-slate-900">{{ request.user.get_full_name }}</h1>
+      <p class="mt-1 max-w-2xl text-sm leading-7 text-slate-600">شهر و آدرس زمین را ثبت کنید. اگر بخواهید، نقطه دقیق را هم روی نقشه مشخص کنید تا بعداً همان موقعیت پیشنهاد شود.</p>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto grid max-w-6xl items-start gap-6 px-4 py-8 lg:grid-cols-[18rem_minmax(0,1fr)]">
+  <aside class="lg:sticky lg:top-24">
+    {% include "marketplace/partials/completion.html" with profile=profile %}
+  </aside>
+
+  <form method="post" class="space-y-5">
+    {% csrf_token %}
+    {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+    {% if form.non_field_errors %}
+      <div class="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <section class="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+      <div class="mb-5 flex items-center gap-3">
+        <span class="grid h-11 w-11 place-items-center rounded-2xl bg-teal-50 text-teal-700">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.2"/></svg>
+        </span>
+        <div>
+          <h2 class="font-extrabold text-slate-900">نشانی زمین</h2>
+          <p class="text-xs text-slate-500">شهر و آدرس برای پیدا شدن زمین لازم است.</p>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label for="{{ form.farm_city.id_for_label }}" class="mb-1.5 block text-sm font-semibold">{{ form.farm_city.label }}</label>
+          <div class="input-icon relative">
+            <span class="input-icon-mark pointer-events-none absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-400" aria-hidden="true">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.2"/></svg>
+            </span>
+            {{ form.farm_city }}
+          </div>
+          {% for error in form.farm_city.errors %}<p class="mt-1 text-xs text-rose-600">{{ error }}</p>{% endfor %}
+        </div>
+        <div>
+          <label for="{{ form.farm_address.id_for_label }}" class="mb-1.5 block text-sm font-semibold">{{ form.farm_address.label }}</label>
+          <div class="input-icon relative">
+            <span class="input-icon-mark pointer-events-none absolute right-0 top-0 grid h-12 w-11 place-items-center text-slate-400" aria-hidden="true">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10.5 12 4l8 6.5V20H4v-9.5z"/><path d="M9 20v-6h6v6"/></svg>
+            </span>
+            {{ form.farm_address }}
+          </div>
+          {% for error in form.farm_address.errors %}<p class="mt-1 text-xs text-rose-600">{{ error }}</p>{% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="flex items-start gap-3">
+          <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z"/><path d="M9 3v15M15 6v15"/></svg>
+          </span>
+          <div>
+            <p class="font-extrabold text-slate-900">موقعیت روی نقشه <span class="mr-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">اختیاری</span></p>
+            <p id="map-status" class="mt-1 text-xs leading-6 text-slate-500">موقعیتی انتخاب نشده. این بخش اجباری نیست.</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" id="map-locate" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-teal-300 hover:text-teal-800">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+            موقعیت من
+          </button>
+          <button type="button" id="map-clear" class="inline-flex items-center gap-1.5 rounded-xl border border-rose-100 bg-white px-3 py-2 text-xs font-bold text-rose-600 transition hover:bg-rose-50 {% if not profile.has_farm_location %}hidden{% endif %}">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 7h14M9 7V5h6v2M8 7l1 12h6l1-12"/></svg>
+            حذف
+          </button>
+        </div>
+      </div>
+      <div class="relative z-0 mt-4 overflow-hidden rounded-2xl border border-slate-200 shadow-inner">
+        <div id="farm-map" class="h-80 w-full sm:h-96"></div>
+      </div>
+      {% for error in form.farm_latitude.errors %}<p class="mt-2 text-xs text-rose-600">{{ error }}</p>{% endfor %}
+      {% for error in form.farm_longitude.errors %}<p class="mt-2 text-xs text-rose-600">{{ error }}</p>{% endfor %}
+      <p class="mt-3 text-xs leading-6 text-slate-400">روی نقشه کلیک کنید یا نشانگر را بکشید. با انتخاب شهر، نقشه همان حوالی را نشان می‌دهد.</p>
+    </section>
+
+    <button type="submit" class="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-teal-600/20 transition hover:bg-teal-700">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+      ذخیره موقعیت زمین
+    </button>
+  </form>
+</section>
+{{ city_centers|json_script:"city-centers" }}
+{% endblock %}
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  (function () {
+    if (!window.L) return;
+    const latInput = document.getElementById('id_farm_latitude');
+    const lngInput = document.getElementById('id_farm_longitude');
+    const status = document.getElementById('map-status');
+    const clearBtn = document.getElementById('map-clear');
+    const locateBtn = document.getElementById('map-locate');
+    const citySelect = document.getElementById('id_farm_city');
+    const centersNode = document.getElementById('city-centers');
+    const centers = centersNode ? JSON.parse(centersNode.textContent) : {};
+    const fa = (value) => String(value).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[digit]);
+    const iran = [32.5, 53.7];
+    const inIran = (lat, lng) => lat >= 24 && lat <= 40 && lng >= 44 && lng <= 64;
+    const hasPin = latInput.value !== '' && lngInput.value !== '';
+    const selectedCenter = centers[citySelect.value];
+    const start = hasPin
+      ? [parseFloat(latInput.value), parseFloat(lngInput.value)]
+      : (selectedCenter ? [selectedCenter.lat, selectedCenter.lng] : iran);
+    const zoom = hasPin ? 14 : (selectedCenter ? 11 : 5);
+    const map = L.map('farm-map', { scrollWheelZoom: false, minZoom: 5, maxZoom: 18 }).setView(start, zoom);
+    L.tileLayer('https://tiles.mapup.ir/styles/basic-preview/{z}/{x}/{y}.png', {
+      minZoom: 5,
+      maxZoom: 18,
+      attribution: '&copy; مپ‌آپ',
+    }).addTo(map);
+    const icon = L.divIcon({
+      className: 'farm-pin',
+      html: '<span></span>',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+    });
+    let marker = null;
+
+    function setStatus(lat, lng) {
+      if (lat == null) {
+        status.textContent = 'موقعیتی انتخاب نشده. این بخش اجباری نیست.';
+        clearBtn.classList.add('hidden');
+        return;
+      }
+      status.textContent = 'عرض ' + fa(lat.toFixed(5)) + ' · طول ' + fa(lng.toFixed(5));
+      clearBtn.classList.remove('hidden');
+    }
+
+    function write(lat, lng) {
+      latInput.value = lat.toFixed(6);
+      lngInput.value = lng.toFixed(6);
+      setStatus(lat, lng);
+    }
+
+    function place(lat, lng, pan) {
+      if (!inIran(lat, lng)) {
+        status.textContent = 'این نقطه خارج از ایران است. جای دیگری از نقشه را انتخاب کنید.';
+        return;
+      }
+      if (!marker) {
+        marker = L.marker([lat, lng], { draggable: true, icon }).addTo(map);
+        marker.on('dragend', () => {
+          const point = marker.getLatLng();
+          if (!inIran(point.lat, point.lng)) {
+            marker.setLatLng([parseFloat(latInput.value), parseFloat(lngInput.value)]);
+            status.textContent = 'نشانگر باید داخل ایران بماند.';
+            return;
+          }
+          write(point.lat, point.lng);
+        });
+      } else {
+        marker.setLatLng([lat, lng]);
+      }
+      write(lat, lng);
+      if (pan) map.setView([lat, lng], Math.max(map.getZoom(), 13));
+    }
+
+    map.on('click', (event) => place(event.latlng.lat, event.latlng.lng, false));
+    if (hasPin) place(start[0], start[1], false);
+    else setStatus(null, null);
+
+    clearBtn.addEventListener('click', () => {
+      if (marker) {
+        map.removeLayer(marker);
+        marker = null;
+      }
+      latInput.value = '';
+      lngInput.value = '';
+      setStatus(null, null);
+    });
+
+    locateBtn.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        status.textContent = 'مرورگر موقعیت مکانی را پشتیبانی نمی‌کند. روی نقشه کلیک کنید.';
+        return;
+      }
+      status.textContent = 'در حال دریافت موقعیت...';
+      navigator.geolocation.getCurrentPosition(
+        (position) => place(position.coords.latitude, position.coords.longitude, true),
+        () => { status.textContent = 'دسترسی به موقعیت مرورگر ممکن نشد. روی نقشه کلیک کنید.'; }
+      );
+    });
+
+    citySelect.addEventListener('change', () => {
+      if (marker) return;
+      const center = centers[citySelect.value];
+      if (center) map.setView([center.lat, center.lng], 11);
+    });
+
+    setTimeout(() => map.invalidateSize(), 150);
+  })();
+</script>
+{% endblock %}

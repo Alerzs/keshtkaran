@@ -1,0 +1,342 @@
+{% extends "marketplace/base.html" %}
+{% load fa %}
+
+{% block title %}خدمات جانبی کشاورزی{% endblock %}
+
+{% block content %}
+<section class="bg-[#ffe08a]">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-3 px-4 py-2.5 text-sm">
+    <span>کارگر ماهر کشاورزی، نزدیک زمین شما</span>
+    <a href="{% url 'services' %}" class="rounded-full bg-teal-600 px-3 py-1 text-xs font-bold text-white">ثبت درخواست</a>
+  </div>
+</section>
+
+<section class="relative overflow-hidden bg-[#1ec9a8] text-white">
+  <div class="pointer-events-none absolute inset-0 opacity-30" style="background-image: radial-gradient(rgba(255,255,255,.45) 1px, transparent 1px); background-size: 18px 18px;"></div>
+  <div class="relative mx-auto max-w-3xl px-4 pb-28 pt-14 text-center">
+    <p class="text-3xl font-extrabold leading-relaxed sm:text-5xl">نیروی ماهر کشاورزی</p>
+    <p class="mt-2 text-2xl font-bold sm:text-4xl">راحت پیدا می‌شه</p>
+    <p class="mt-4 text-sm text-white/90 sm:text-base">نوع خدمت را انتخاب کنید تا کارگران همان حوزه، در شهر زمین شما پیشنهاد شوند.</p>
+    <form action="{% url 'workers' %}" method="get" class="mx-auto mt-8 flex flex-col gap-2 rounded-3xl bg-white p-2 text-slate-800 shadow-xl sm:flex-row sm:items-center">
+      <label class="sr-only" for="hero-q">جستجوی خدمت</label>
+      <div class="flex min-w-0 flex-1 items-center gap-2 px-3">
+        <svg class="h-5 w-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="hero-q" name="q" list="service-names" placeholder="جستجو در خدمات کشاورزی" class="w-full bg-transparent py-3 text-sm outline-none placeholder:text-slate-400">
+      </div>
+      <datalist id="service-names">
+        {% for service in all_services %}
+          <option value="{{ service.name }}"></option>
+        {% endfor %}
+      </datalist>
+      <label class="sr-only" for="hero-city">شهر</label>
+      <select id="hero-city" name="city" class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm outline-none sm:w-40">
+        <option value="">همه شهرها</option>
+        {% for city in cities %}
+          <option value="{{ city.pk }}">{{ city.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="rounded-2xl bg-teal-600 px-6 py-3 text-sm font-bold text-white hover:bg-teal-700">جستجو</button>
+    </form>
+  </div>
+  <div class="absolute inset-x-0 bottom-0 flex justify-center text-white/90">
+    <svg viewBox="0 0 420 90" class="h-24 w-[28rem]" aria-hidden="true">
+      <path d="M20 78c30-28 48-28 70 0 18-36 40-36 62 0 20-30 46-28 64 2 22-34 50-30 70 4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M48 78V48M48 52c-14-2-22-12-20-22 12 2 18 12 20 22zM48 58c16 0 24-12 22-24-14 2-20 14-22 24z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M150 78V46M150 50c-16 0-26-14-24-26 14 2 22 14 24 26zM150 60c18-2 28-16 24-28-16 4-22 16-24 28z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M250 80V50M250 56c-14-2-20-12-18-22 10 2 16 12 18 22z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M330 78c20-20 40-18 58 2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+    </svg>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-4 pt-12" id="categories">
+  <h1 class="text-center text-2xl font-extrabold text-slate-900 sm:text-3xl">خدمات جانبی کشاورزی با کشت‌کاران</h1>
+  <p class="mx-auto mt-2 max-w-2xl text-center text-sm leading-7 text-slate-500">صاحبان زمین نوع کار و آدرس را انتخاب می‌کنند. کارگران حوزه کاری و محل کارشان را در پروفایل ثبت کرده‌اند.</p>
+
+  <div class="mt-8 grid grid-cols-3 gap-3 rounded-3xl bg-white p-4 shadow-sm sm:grid-cols-3">
+    <div class="text-center">
+      <div class="text-2xl font-extrabold text-teal-700">{{ stats.workers|fa_digits }}</div>
+      <div class="text-xs text-slate-500">کارگر فعال</div>
+    </div>
+    <div class="text-center">
+      <div class="text-2xl font-extrabold text-teal-700">{{ stats.services|fa_digits }}</div>
+      <div class="text-xs text-slate-500">نوع خدمت</div>
+    </div>
+    <div class="text-center">
+      <div class="text-2xl font-extrabold text-teal-700">{{ stats.cities|fa_digits }}</div>
+      <div class="text-xs text-slate-500">شهر محل کار</div>
+    </div>
+  </div>
+
+  <div class="mt-8 flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+    {% for category in categories %}
+      <a href="{{ category.get_absolute_url }}" class="flex w-28 shrink-0 flex-col items-center gap-2 text-center">
+        {% include "marketplace/partials/category_icon.html" with category=category %}
+        <span class="text-xs font-semibold leading-5 text-slate-700">{{ category.name }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mx-auto mt-12 max-w-6xl px-4">
+  <div class="mb-4 flex items-end justify-between">
+    <h2 class="text-xl font-extrabold">خدمات پرتقاضا</h2>
+    <a href="{% url 'services' %}" class="text-sm font-semibold text-teal-700">مشاهده همه</a>
+  </div>
+  <div class="relative" data-slider>
+    <button type="button" data-slider-prev aria-label="خدمات قبلی" class="absolute top-1/2 right-1 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white text-slate-700 shadow-md ring-1 ring-slate-200 transition hover:bg-teal-50 hover:text-teal-700 disabled:pointer-events-none disabled:opacity-0">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button type="button" data-slider-next aria-label="خدمات بعدی" class="absolute top-1/2 left-1 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white text-slate-700 shadow-md ring-1 ring-slate-200 transition hover:bg-teal-50 hover:text-teal-700 disabled:pointer-events-none disabled:opacity-0">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div data-slider-track class="flex cursor-grab gap-4 overflow-x-auto pb-3 no-scrollbar active:cursor-grabbing">
+      {% for service in popular_services %}
+        <a href="{{ service.get_absolute_url }}" draggable="false" class="w-64 shrink-0 cursor-grab select-none overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:shadow-md">
+          <div class="flex h-28 items-end bg-linear-to-br {{ service.gradient }} p-4 text-white">
+            <span class="rounded-full bg-white/20 px-2 py-1 text-[11px]">{{ service.category.name }}</span>
+          </div>
+          <div class="p-4">
+            <h3 class="font-bold">{{ service.name }}</h3>
+            <p class="mt-1 line-clamp-2 text-xs leading-6 text-slate-500">{{ service.description }}</p>
+            <p class="mt-3 text-xs font-semibold text-teal-700">شروع از {{ service.base_price|toman }}</p>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto mt-16 max-w-6xl px-4">
+  <h2 class="text-center text-xl font-extrabold">سه قدم تا نیروی حاضر در زمین</h2>
+  <div class="mt-6 grid gap-4 md:grid-cols-3">
+    <article class="rounded-3xl bg-white p-6 shadow-sm">
+      <div class="grid h-12 w-12 place-items-center rounded-2xl bg-teal-600 text-lg font-extrabold text-white">۱</div>
+      <h3 class="mt-4 font-bold">خدمت و آدرس</h3>
+      <p class="mt-2 text-sm leading-7 text-slate-500">نوع کار، شهر و نشانی دقیق زمین را مشخص کنید.</p>
+    </article>
+    <article class="rounded-3xl bg-white p-6 shadow-sm">
+      <div class="grid h-12 w-12 place-items-center rounded-2xl bg-amber-400 text-lg font-extrabold text-slate-900">۲</div>
+      <h3 class="mt-4 font-bold">پیشنهاد کارگران</h3>
+      <p class="mt-2 text-sm leading-7 text-slate-500">فقط کسانی را می‌بینید که همان حوزه را کار می‌کنند و در همان شهر فعال‌اند.</p>
+    </article>
+    <article class="rounded-3xl bg-white p-6 shadow-sm">
+      <div class="grid h-12 w-12 place-items-center rounded-2xl bg-slate-800 text-lg font-extrabold text-white">۳</div>
+      <h3 class="mt-4 font-bold">رزرو</h3>
+      <p class="mt-2 text-sm leading-7 text-slate-500">کارگر درخواست را می‌پذیرد و برای روز مشخص‌شده هماهنگ می‌شوید.</p>
+    </article>
+  </div>
+</section>
+
+<section class="mx-auto mt-14 max-w-6xl px-4">
+  <div class="mb-4 flex items-end justify-between">
+    <div>
+      <h2 class="text-xl font-extrabold">یک کارگر انتخاب کنید</h2>
+      <p class="mt-1 text-sm text-slate-500">بر اساس امتیاز کارهایی که قبلاً انجام شده‌اند</p>
+    </div>
+    <a href="{% url 'workers' %}" class="text-sm font-semibold text-teal-700">همه کارگران</a>
+  </div>
+  <div class="grid gap-4">
+    {% for worker in featured_workers %}
+      {% include "marketplace/partials/worker_card.html" %}
+    {% endfor %}
+  </div>
+</section>
+
+
+<section class="mx-auto mt-16 max-w-6xl px-4">
+  <h2 class="text-xl font-extrabold">نظر صاحبان زمین</h2>
+  <div class="mt-4 grid gap-4 md:grid-cols-3">
+    {% for review in reviews %}
+      <article class="rounded-3xl bg-white p-5 shadow-sm">
+        <div class="text-amber-500">★ {{ review.rating|fa_digits }}</div>
+        <p class="mt-3 text-sm leading-7 text-slate-600">{{ review.comment }}</p>
+        <p class="mt-4 text-xs font-semibold text-slate-800">{{ review.author_name }}</p>
+        <p class="text-xs text-slate-400">درباره {{ review.worker.profile.user.get_full_name }}</p>
+      </article>
+    {% empty %}
+      <p class="text-sm text-slate-500">هنوز نظری ثبت نشده است.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mx-auto mt-16 max-w-6xl px-4">
+  <h2 class="text-xl font-extrabold">کشت‌کاران در منطقه شما</h2>
+  <p class="mt-1 text-sm text-slate-500">شهرهای پربازدید</p>
+  <div class="mt-4 flex flex-wrap gap-2">
+    {% for city in featured_cities %}
+      <a href="{% url 'workers' %}?city={{ city.pk }}" class="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100 hover:ring-teal-400">{{ city.name }}</a>
+    {% endfor %}
+  </div>
+  <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    {% regroup cities by province as provinces %}
+    {% for group in provinces %}
+      <div>
+        <h3 class="text-sm font-bold text-slate-800">{{ group.grouper }}</h3>
+        <div class="mt-2 flex flex-wrap gap-2">
+          {% for city in group.list %}
+            <a href="{% url 'workers' %}?city={{ city.pk }}" class="text-sm text-slate-500 hover:text-teal-700">{{ city.name }}</a>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('[data-slider]').forEach((slider) => {
+    const track = slider.querySelector('[data-slider-track]');
+    const prev = slider.querySelector('[data-slider-prev]');
+    const next = slider.querySelector('[data-slider-next]');
+    if (!track || !prev || !next) return;
+
+    const rtl = getComputedStyle(track).direction === 'rtl';
+
+    function measureScrollSign() {
+      const card = track.firstElementChild;
+      if (!card || track.scrollWidth <= track.clientWidth + 2) return -1;
+      const previousSnap = track.style.scrollSnapType;
+      track.style.scrollSnapType = 'none';
+      const origin = track.scrollLeft;
+      const before = card.getBoundingClientRect().left;
+      let perPixel = 0;
+      for (const attempt of [24, -24]) {
+        track.scrollLeft = origin + attempt;
+        const shift = card.getBoundingClientRect().left - before;
+        if (Math.abs(shift) > 0.5) {
+          perPixel = shift / attempt;
+          break;
+        }
+      }
+      track.scrollLeft = origin;
+      track.style.scrollSnapType = previousSnap;
+      return perPixel > 0 ? 1 : -1;
+    }
+
+    const contentMovesRightWhenScrollIncreases = measureScrollSign();
+    let animationFrame = 0;
+    let destination = null;
+
+    function stepSize() {
+      const cards = [...track.children];
+      if (cards.length < 2) return cards[0] ? cards[0].getBoundingClientRect().width : 0;
+      const first = cards[0].getBoundingClientRect();
+      const second = cards[1].getBoundingClientRect();
+      return Math.abs(second.left - first.left);
+    }
+
+    function cardDelta() {
+      const distance = stepSize();
+      if (!distance) return 0;
+      return (rtl ? distance : -distance) / contentMovesRightWhenScrollIncreases;
+    }
+
+    function animateTo(target) {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      const start = track.scrollLeft;
+      const change = target - start;
+      if (Math.abs(change) < 1) {
+        destination = null;
+        return;
+      }
+      const duration = Math.min(560, Math.max(280, Math.abs(change) * 1.15));
+      const started = performance.now();
+      function frame(now) {
+        const progress = Math.min(1, (now - started) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        track.scrollLeft = start + change * eased;
+        if (progress < 1) animationFrame = requestAnimationFrame(frame);
+        else {
+          animationFrame = 0;
+          destination = null;
+        }
+      }
+      animationFrame = requestAnimationFrame(frame);
+    }
+
+    function slide(step) {
+      const delta = cardDelta();
+      if (!delta) return;
+      const from = destination == null ? track.scrollLeft : destination;
+      destination = from + delta * step;
+      animateTo(destination);
+    }
+
+    function settle() {
+      const delta = cardDelta();
+      if (!delta) return;
+      const steps = Math.round(track.scrollLeft / delta);
+      destination = steps * delta;
+      animateTo(destination);
+    }
+
+    function updateButtons() {
+      const cards = [...track.children];
+      const max = track.scrollWidth - track.clientWidth;
+      if (!cards.length || max <= 2) {
+        prev.disabled = true;
+        next.disabled = true;
+        prev.classList.add('hidden');
+        next.classList.add('hidden');
+        return;
+      }
+      prev.classList.remove('hidden');
+      next.classList.remove('hidden');
+      const trackRect = track.getBoundingClientRect();
+      const firstRect = cards[0].getBoundingClientRect();
+      const lastRect = cards[cards.length - 1].getBoundingClientRect();
+      prev.disabled = rtl ? firstRect.right <= trackRect.right + 8 : firstRect.left >= trackRect.left - 8;
+      next.disabled = rtl ? lastRect.left >= trackRect.left - 8 : lastRect.right <= trackRect.right + 8;
+    }
+
+    prev.addEventListener('click', () => slide(-1));
+    next.addEventListener('click', () => slide(1));
+    track.addEventListener('scroll', updateButtons, { passive: true });
+    window.addEventListener('resize', updateButtons);
+    updateButtons();
+
+    let pointerId = null;
+    let startX = 0;
+    let startScroll = 0;
+    let dragged = false;
+
+    track.addEventListener('dragstart', (event) => event.preventDefault());
+
+    track.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'mouse' || event.button !== 0) return;
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+      destination = null;
+      pointerId = event.pointerId;
+      startX = event.clientX;
+      startScroll = track.scrollLeft;
+      dragged = false;
+      track.setPointerCapture(event.pointerId);
+    });
+
+    track.addEventListener('pointermove', (event) => {
+      if (event.pointerId !== pointerId) return;
+      const dx = event.clientX - startX;
+      if (Math.abs(dx) > 4) dragged = true;
+      track.scrollLeft = startScroll + dx * contentMovesRightWhenScrollIncreases;
+    });
+
+    function endDrag(event) {
+      if (event.pointerId !== pointerId) return;
+      pointerId = null;
+      if (dragged) settle();
+    }
+
+    track.addEventListener('pointerup', endDrag);
+    track.addEventListener('pointercancel', endDrag);
+    track.addEventListener('click', (event) => {
+      if (!dragged) return;
+      event.preventDefault();
+      event.stopPropagation();
+      dragged = false;
+    }, true);
+  });
+</script>
+{% endblock %}

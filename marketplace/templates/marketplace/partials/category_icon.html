@@ -1,0 +1,19 @@
+<span class="grid place-items-center {{ box_class|default:'h-16 w-16 rounded-2xl' }} {{ category.icon_bg }}" aria-hidden="true">
+  {% if category.slug == 'planting' %}
+    <svg class="{{ svg_class|default:'h-7 w-7' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22V12"/><path d="M12 12C12 8 8 6 4.5 6.8 6 11 9 12 12 12z"/><path d="M12 10c0-3.5 3.5-6 7-5.2-1.2 3.4-3.8 5.2-7 5.2z"/></svg>
+  {% elif category.slug == 'irrigation' %}
+    <svg class="{{ svg_class|default:'h-7 w-7' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg>
+  {% elif category.slug == 'protection' %}
+    <svg class="{{ svg_class|default:'h-7 w-7' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/></svg>
+  {% elif category.slug == 'orchard' %}
+    <svg class="{{ svg_class|default:'h-7 w-7' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22v-7"/><path d="M12 15c-4 0-6.5-3-6.5-6.2C8 9 9.2 7 12 3c2.8 4 4 6 6.5 5.8C18.5 12 16 15 12 15z"/></svg>
+  {% elif category.slug == 'machinery' %}
+    <svg class="{{ svg_class|default:'h-7 w-7' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="17" r="2.4"/><circle cx="17" cy="17" r="2.4"/><path d="M5 17H4V13h6l2-4h5l2 4h1v4h-1M9.5 17h5"/></svg>
+  {% elif category.slug == 'livestock' %}
+    <svg class="{{ svg_class|default:'h-7 w-7' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11l8-6 8 6v9H4v-9z"/><path d="M9 20v-5h6v5"/></svg>
+  {% elif category.slug == 'logistics' %}
+    <svg class="{{ svg_class|default:'h-7 w-7' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8l9-4 9 4-9 4L3 8z"/><path d="M3 8v9l9 4 9-4V8"/><path d="M12 12v9"/></svg>
+  {% else %}
+    <svg class="{{ svg_class|default:'h-7 w-7' }}" viewBox="0 0 24 24" fill="currentColor"><circle cx="7" cy="7" r="1.6"/><circle cx="12" cy="7" r="1.6"/><circle cx="17" cy="7" r="1.6"/><circle cx="7" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17" cy="12" r="1.6"/><circle cx="7" cy="17" r="1.6"/><circle cx="12" cy="17" r="1.6"/><circle cx="17" cy="17" r="1.6"/></svg>
+  {% endif %}
+</span>

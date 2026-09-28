@@ -1,0 +1,52 @@
+<nav class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white lg:hidden">
+  <div class="grid grid-cols-4 text-center text-[11px] font-medium text-slate-500">
+    <a href="{% url 'home' %}" class="flex flex-col items-center gap-1 py-2.5 {% if request.resolver_match.url_name == 'home' %}text-teal-700{% endif %}">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11l8-7 8 7v9H4v-9z"/></svg>
+      خانه
+    </a>
+    <a href="{% url 'services' %}" class="flex flex-col items-center gap-1 py-2.5 {% if request.resolver_match.url_name == 'services' or request.resolver_match.url_name == 'category' %}text-teal-700{% endif %}">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+      خدمات
+    </a>
+    {% if current_profile.role == 'worker' %}
+      <a href="{% url 'worker_jobs' %}" class="flex flex-col items-center gap-1 py-2.5 {% if request.resolver_match.url_name == 'worker_jobs' %}text-teal-700{% endif %}">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h8l1 4H7l1-4zM6 10h12v8H6z"/></svg>
+        کارها
+      </a>
+      <a href="{% url 'worker_profile' %}" class="flex flex-col items-center gap-1 py-2.5 {% if request.resolver_match.url_name == 'worker_profile' %}text-teal-700{% endif %}">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19"/></svg>
+        پروفایل
+      </a>
+    {% elif current_profile.role == 'admin' %}
+      <a href="{% url 'admin_panel' %}" class="flex flex-col items-center gap-1 py-2.5 {% if request.resolver_match.url_name == 'admin_panel' %}text-teal-700{% endif %}">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h10v16H7zM9 8h6M9 12h6"/></svg>
+        پنل
+      </a>
+      <a href="{% url 'admin_panel' %}" class="flex flex-col items-center gap-1 py-2.5 text-teal-700">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19"/></svg>
+        ادمین
+      </a>
+    {% else %}
+      <a href="{% url 'bookings' %}" class="flex flex-col items-center gap-1 py-2.5 {% if request.resolver_match.url_name == 'bookings' %}text-teal-700{% endif %}">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h10v16H7zM9 8h6M9 12h6"/></svg>
+        سفارش‌ها
+      </a>
+      {% if current_profile.role == 'farmer' %}
+        <a href="{% url 'farmer_profile' %}" class="flex flex-col items-center gap-1 py-2.5 {% if request.resolver_match.url_name == 'farmer_profile' %}text-teal-700{% endif %}">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19"/></svg>
+          پروفایل
+        </a>
+      {% elif request.user.is_authenticated %}
+        <a href="{% url 'bookings' %}" class="flex flex-col items-center gap-1 py-2.5 text-teal-700">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19"/></svg>
+          حساب
+        </a>
+      {% else %}
+        <a href="{% url 'login' %}" class="flex flex-col items-center gap-1 py-2.5">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19"/></svg>
+          ورود
+        </a>
+      {% endif %}
+    {% endif %}
+  </div>
+</nav>

@@ -21,7 +21,7 @@ def env_csv(name, default=''):
 
 
 
-SECRET_KEY = os.environ.get('SECRET_KEY', '').strip().strip("'\"")
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '').strip().strip("'\"")
 DEBUG = env_bool('DEBUG', default=False)
 
 if not SECRET_KEY:

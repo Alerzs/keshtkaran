@@ -1,10 +1,10 @@
 {% extends "marketplace/base.html" %}
 {% load fa %}
-{% block title %}کارگران پیشنهادی{% endblock %}
+{% block title %}سرویس دهندگان پیشنهادی{% endblock %}
 {% block content %}
 <section class="border-b border-teal-100 bg-teal-50">
   <div class="mx-auto max-w-6xl px-4 py-8">
-    <h1 class="text-2xl font-extrabold">کارگران پیشنهادی</h1>
+    <h1 class="text-2xl font-extrabold">سرویس دهندگان پیشنهادی</h1>
     <p class="mt-2 text-sm text-slate-600">فهرست بر اساس حوزه کاری و شهر محل کار فیلتر شده است.</p>
     {% if selected_service or address %}
       <div class="mt-5">{% include "marketplace/partials/steps.html" with current=2 %}</div>
@@ -56,7 +56,7 @@
         {% if selected_city %} در {{ selected_city.name }}{% endif %}
         {% if address %} — آدرس زمین: {{ address }}{% endif %}
         {% if work_date %} — تاریخ {{ work_date|fa_digits }}{% endif %}
-        <span class="mt-1 block font-semibold text-teal-700">{{ page_obj.paginator.count|fa_digits }} کارگر پیدا شد</span>
+        <span class="mt-1 block font-semibold text-teal-700">{{ page_obj.paginator.count|fa_digits }} سرویس دهنده پیدا شد</span>
       </div>
     {% endif %}
     <div class="grid gap-4">
@@ -64,7 +64,7 @@
         {% include "marketplace/partials/worker_card.html" %}
       {% empty %}
         <div class="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-          <p class="font-bold">در این ترکیب شهر و خدمت، کارگر فعالی نیست.</p>
+          <p class="font-bold">در این ترکیب شهر و خدمت، سرویس دهنده فعالی نیست.</p>
           <p class="mt-2 text-sm text-slate-500">شهر دیگری را امتحان کنید یا خدمت را عوض کنید.</p>
           <a href="{% url 'services' %}" class="mt-4 inline-block rounded-xl bg-teal-600 px-4 py-2 text-sm font-bold text-white">انتخاب خدمت دیگر</a>
         </div>

@@ -1,6 +1,6 @@
 {% extends "marketplace/base.html" %}
 {% load fa %}
-{% block title %}رزرو {{ worker.profile.user.get_full_name }}{% endblock %}
+{% block title %}رزرو {{ worker.user.get_full_name }}{% endblock %}
 {% block content %}
 <section class="border-b border-teal-100 bg-teal-50">
   <div class="mx-auto max-w-6xl px-4 py-8">
@@ -22,13 +22,13 @@
       </div>
     {% endfor %}
     <button type="submit" class="w-full rounded-2xl bg-teal-600 py-3 text-sm font-bold text-white hover:bg-teal-700">ثبت درخواست رزرو</button>
-    <p class="text-xs leading-6 text-slate-400">کارگر درخواست را می‌پذیرد و پایان کار را اعلام می‌کند. انجام کار وقتی قطعی است که ادمین آن را تأیید کند.</p>
+    <p class="text-xs leading-6 text-slate-400">بعد از پذیرش سرویس دهنده، نام و شماره تماس او نمایش داده می‌شود. پایان کار و نظر را خودتان ثبت می‌کنید.</p>
   </form>
   <aside class="h-fit rounded-3xl bg-white p-6 shadow-sm">
     <div class="flex items-center gap-3">
-      <div class="grid h-12 w-12 place-items-center rounded-2xl font-bold text-white {{ worker.profile.avatar_class }}">{{ worker.profile.initials }}</div>
+      <div class="grid h-12 w-12 place-items-center rounded-2xl font-bold text-white {{ worker.user.profile.avatar_class }}">{{ worker.user.profile.initials }}</div>
       <div>
-        <h2 class="font-extrabold">{{ worker.profile.user.get_full_name }}</h2>
+        <h2 class="font-extrabold">{{ worker.user.get_full_name }}</h2>
         <p class="text-xs text-slate-500">★ {{ worker.rating|floatformat:1|fa_digits }} · {{ worker.experience_years|fa_digits }} سال سابقه</p>
       </div>
     </div>

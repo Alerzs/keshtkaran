@@ -7,6 +7,36 @@
 
 @theme {
   --font-sans: "Vazirmatn", Tahoma, ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Markazi Text", "Vazirmatn", serif;
+
+  --color-paper: #f3efe6;
+  --color-sheet: #fffdf8;
+  --color-line: #e4d8c4;
+  --color-ink: #241c14;
+  --color-muted: #5c5146;
+  --color-soil: #24351f;
+  --color-soil-deep: #1c2b1a;
+  --color-clay: #a34b2d;
+  --color-clay-dark: #8c3e24;
+  --color-wheat: #c4a574;
+
+  --color-teal-50: #eef2e8;
+  --color-teal-100: #dce6d2;
+  --color-teal-200: #c3d2b4;
+  --color-teal-300: #9bb489;
+  --color-teal-400: #c46b4a;
+  --color-teal-500: #b85c38;
+  --color-teal-600: #a34b2d;
+  --color-teal-700: #8c3e24;
+  --color-teal-800: #6e321d;
+  --color-teal-900: #4e2415;
+  --color-teal-950: #0d140b;
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -32,7 +62,7 @@
 }
 
 .input-icon:focus-within .input-icon-mark {
-  color: #0f766e;
+  color: #8c3e24;
 }
 
 [data-slider-track] a {

@@ -21,7 +21,11 @@ def env_csv(name, default=''):
 
 
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '').strip().strip("'\"")
+SECRET_KEY = (
+    os.environ.get('SECRET_KEY')
+    or os.environ.get('DJANGO_SECRET_KEY')
+    or ''
+).strip().strip("'\"")
 DEBUG = env_bool('DEBUG', default=False)
 
 if not SECRET_KEY:
@@ -30,9 +34,14 @@ if not SECRET_KEY:
     )
 
 ALLOWED_HOSTS = env_csv('ALLOWED_HOSTS', '127.0.0.1,localhost')
-CSRF_TRUSTED_ORIGINS = env_csv('CSRF_TRUSTED_ORIGINS')
+CSRF_TRUSTED_ORIGINS = [
+    origin for origin in env_csv('CSRF_TRUSTED_ORIGINS')
+    if origin.startswith(('http://', 'https://'))
+]
 
 
+
+AUTH_USER_MODEL = 'marketplace.User'
 
 INSTALLED_APPS = [
     'django.contrib.admin',

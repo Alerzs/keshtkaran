@@ -2,7 +2,7 @@
 {% block title %}ورود{% endblock %}
 {% block content %}
 <section class="mx-auto grid max-w-5xl gap-6 px-4 py-10 lg:grid-cols-2">
-  <form method="post" class="rounded-3xl bg-white p-6 shadow-sm">
+  <form method="post" class="border border-line bg-sheet p-6">
     {% csrf_token %}
     {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
     <h1 class="text-2xl font-extrabold">ورود</h1>
@@ -18,20 +18,20 @@
           {% for error in field.errors %}<p class="mt-1 text-xs text-rose-600">{{ error }}</p>{% endfor %}
         </div>
       {% endfor %}
-      <button type="submit" class="w-full rounded-2xl bg-teal-600 py-3 text-sm font-bold text-white">ورود</button>
+      <button type="submit" class="w-full bg-clay py-3 text-sm font-semibold text-white hover:bg-clay-dark">ورود</button>
     </div>
     <p class="mt-4 text-sm text-slate-500">حساب ندارید؟ <a class="font-bold text-teal-700" href="{% url 'register' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">ثبت‌نام</a></p>
   </form>
-  <aside class="rounded-3xl bg-[#1ec9a8] p-6 text-white">
-    <h2 class="text-xl font-extrabold">حساب آزمایشی</h2>
-    <p class="mt-2 text-sm leading-7 text-white/90">برای دیدن مسیر رزرو، با یکی از این شماره‌ها وارد شوید. رمز همه demo1234 است.</p>
+  <aside class="bg-soil p-6 text-[#f6f1e6]">
+    <h2 class="text-3xl">حساب آزمایشی</h2>
+    <p class="mt-2 text-sm leading-7 text-[#e7e0d2]/80">برای دیدن مسیر رزرو، با یکی از این شماره‌ها وارد شوید. رمز همه demo1234 است.</p>
     <dl class="mt-5 space-y-3 text-sm">
       <div class="rounded-2xl bg-white/15 p-4">
         <dt class="text-white/80">صاحب زمین</dt>
         <dd class="mt-1 font-bold" dir="ltr">09121111111</dd>
       </div>
       <div class="rounded-2xl bg-white/15 p-4">
-        <dt class="text-white/80">کارگر</dt>
+        <dt class="text-white/80">سرویس دهنده</dt>
         <dd class="mt-1 font-bold" dir="ltr">09130000001</dd>
       </div>
       <div class="rounded-2xl bg-white/15 p-4">

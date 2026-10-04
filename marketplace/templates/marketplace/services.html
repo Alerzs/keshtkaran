@@ -9,7 +9,7 @@
 </section>
 <section class="mx-auto grid max-w-6xl gap-4 px-4 py-8 sm:grid-cols-2 lg:grid-cols-4">
   {% for category in categories %}
-    <a href="{{ category.get_absolute_url }}" class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:shadow-md">
+    <a href="{{ category.get_absolute_url }}" class="border border-line bg-sheet p-5 transition hover:border-clay">
       {% include "marketplace/partials/category_icon.html" with category=category %}
       <h2 class="mt-4 font-bold">{{ category.name }}</h2>
       <p class="mt-1 text-xs leading-6 text-slate-500">{{ category.description }}</p>

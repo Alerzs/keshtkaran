@@ -1,10 +1,9 @@
 from functools import wraps
 from urllib.parse import urlencode
-
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -28,7 +27,7 @@ def role_required(role):
             if profile is None or profile.role != role:
                 messages.error(request, {
                     Profile.FARMER: 'رزرو نیرو فقط برای صاحبان زمین امکان‌پذیر است.',
-                    Profile.WORKER: 'این بخش مخصوص کارگران است.',
+                    Profile.WORKER: 'این بخش مخصوص سرویس دهندگان است.',
                     Profile.ADMIN: 'این بخش مخصوص ادمین است.',
                 }.get(role, 'به این بخش دسترسی ندارید.'))
                 return redirect('home')
@@ -51,11 +50,14 @@ def home(request):
         'all_services': Service.objects.all(),
         'featured_workers': (
             WorkerProfile.objects.filter(is_active=True)
-            .select_related('profile__user')
+            .select_related('user__profile')
             .prefetch_related('services', 'cities')
             .order_by('-rating', '-jobs_done')[:4]
         ),
-        'reviews': Review.objects.select_related('worker__profile__user')[:6],
+        'reviews': (
+            Review.objects.select_related('worker__user__profile')
+            .prefetch_related('worker__cities')[:6]
+        ),
         'featured_cities': City.objects.filter(is_featured=True).order_by('featured_order'),
         'cities': City.objects.all(),
         'stats': {
@@ -126,15 +128,16 @@ def workers(request):
     ctx = _request_context(request)
     qs = (
         WorkerProfile.objects.filter(is_active=True)
-        .select_related('profile__user')
+        .select_related('user__profile')
         .prefetch_related('services', 'cities')
     )
     if ctx['selected_service']:
         qs = qs.filter(services=ctx['selected_service'])
     elif ctx['q']:
         qs = qs.filter(
-            Q(profile__user__first_name__icontains=ctx['q'])
-            | Q(profile__user__last_name__icontains=ctx['q'])
+            Q(user__name__icontains=ctx['q'])
+            | Q(user__first_name__icontains=ctx['q'])
+            | Q(user__last_name__icontains=ctx['q'])
             | Q(services__name__icontains=ctx['q'])
             | Q(bio__icontains=ctx['q'])
         )
@@ -160,7 +163,7 @@ def workers(request):
 
 def worker_detail(request, pk):
     worker = get_object_or_404(
-        WorkerProfile.objects.select_related('profile__user').prefetch_related('services', 'cities', 'reviews'),
+        WorkerProfile.objects.select_related('user__profile').prefetch_related('services', 'cities', 'reviews'),
         pk=pk,
     )
     return render(request, 'marketplace/worker_detail.html', {
@@ -201,21 +204,21 @@ def book(request, pk):
         messages.info(request, 'قبل از رزرو، شهر و آدرس زمین را در پروفایل کامل کنید.')
         return redirect(f"{reverse('farmer_profile')}?{urlencode({'next': request.get_full_path()})}")
     worker = get_object_or_404(
-        WorkerProfile.objects.select_related('profile__user').prefetch_related('services', 'cities'),
+        WorkerProfile.objects.select_related('user__profile').prefetch_related('services', 'cities'),
         pk=pk,
     )
     if not worker.is_active:
-        messages.error(request, 'این کارگر فعلاً سفارش جدید نمی‌پذیرد.')
+        messages.error(request, 'این سرویس دهنده فعلاً سفارش جدید نمی‌پذیرد.')
         return redirect('workers')
     if not worker.services.exists() or not worker.cities.exists():
-        messages.error(request, 'پروفایل این کارگر هنوز کامل نشده است.')
+        messages.error(request, 'پروفایل این سرویس دهنده هنوز کامل نشده است.')
         return redirect('workers')
 
     if request.method == 'POST':
         form = BookForm(request.POST, worker=worker)
         if form.is_valid():
             booking = form.save(request.user)
-            messages.success(request, 'درخواست رزرو ثبت شد و برای کارگر ارسال گردید.')
+            messages.success(request, 'درخواست رزرو ثبت شد.')
             return redirect('bookings')
     else:
         form = BookForm(worker=worker, initial=_book_initial(request, worker))
@@ -226,7 +229,7 @@ def book(request, pk):
 def bookings(request):
     items = (
         request.user.bookings
-        .select_related('service', 'city', 'worker__profile__user')
+        .select_related('service', 'city', 'worker__user__profile', 'review')
         .order_by('-created_at')
     )
     return render(request, 'marketplace/bookings.html', {'bookings': items})
@@ -242,6 +245,22 @@ def booking_cancel(request, pk):
         messages.success(request, 'رزرو لغو شد.')
     else:
         messages.error(request, 'این رزرو دیگر قابل لغو نیست.')
+    return redirect('bookings')
+
+
+@require_POST
+@role_required(Profile.FARMER)
+def booking_complete(request, pk):
+    booking = get_object_or_404(
+        Booking.objects.select_related('worker'),
+        pk=pk,
+        farmer=request.user,
+        status=Booking.CONFIRMED,
+    )
+    booking.status = Booking.DONE
+    booking.save(update_fields=['status'])
+    WorkerProfile.objects.filter(pk=booking.worker_id).update(jobs_done=F('jobs_done') + 1)
+    messages.success(request, 'اتمام کار ثبت شد. حالا می‌توانید نظر خود را بنویسید.')
     return redirect('bookings')
 
 
@@ -288,24 +307,33 @@ def farmer_profile(request):
 @role_required(Profile.ADMIN)
 def admin_panel(request):
     selected = request.GET.get('status', '')
-    valid = {value for value, _label in Booking.STATUS_CHOICES}
+    valid = {value for value, _label in Booking.STATUS_CHOICES} | {'awaiting'}
     if selected not in valid:
         selected = ''
     jobs = (
         Booking.objects.select_related(
-            'service', 'city', 'farmer__profile', 'worker__profile__user', 'confirmed_by',
+            'service', 'city', 'farmer__profile', 'worker__user__profile', 'confirmed_by',
         )
         .order_by('-created_at')
     )
-    if selected:
+    if selected == 'awaiting':
+        jobs = jobs.filter(status=Booking.PENDING, admin_approved=False)
+    elif selected == Booking.PENDING:
+        jobs = jobs.filter(status=Booking.PENDING, admin_approved=True)
+    elif selected:
         jobs = jobs.filter(status=selected)
     page_obj = Paginator(jobs, 10).get_page(request.GET.get('page'))
     counts = {row['status']: row['total'] for row in Booking.objects.values('status').annotate(total=Count('id'))}
+    awaiting = Booking.objects.filter(status=Booking.PENDING, admin_approved=False).count()
+    pending_ready = counts.get(Booking.PENDING, 0) - awaiting
     filters = [
         {'value': '', 'label': 'همه', 'count': sum(counts.values())},
+        {'value': 'awaiting', 'label': 'منتظر تأیید صلاحیت', 'count': awaiting},
+        {'value': Booking.PENDING, 'label': 'در انتظار پذیرش سرویس دهنده', 'count': pending_ready},
         *[
             {'value': value, 'label': label, 'count': counts.get(value, 0)}
             for value, label in Booking.STATUS_CHOICES
+            if value != Booking.PENDING
         ],
     ]
     return render(request, 'marketplace/admin_panel.html', {
@@ -317,25 +345,24 @@ def admin_panel(request):
 
 @require_POST
 @role_required(Profile.ADMIN)
-def admin_confirm_done(request, pk):
-    booking = get_object_or_404(
-        Booking.objects.select_related('worker'),
-        pk=pk,
-        status=Booking.REPORTED,
-    )
-    booking.status = Booking.DONE
+def admin_approve(request, pk):
+    booking = get_object_or_404(Booking, pk=pk, status=Booking.PENDING, admin_approved=False)
     booking.confirmed_by = request.user
     booking.confirmed_at = timezone.now()
-    booking.save(update_fields=['status', 'confirmed_by', 'confirmed_at'])
-    booking.worker.jobs_done += 1
-    booking.worker.save(update_fields=['jobs_done'])
-    messages.success(request, 'انجام کار تأیید شد.')
+    if request.POST.get('action') == 'reject':
+        booking.status = Booking.REJECTED
+        booking.save(update_fields=['status', 'confirmed_by', 'confirmed_at'])
+        messages.success(request, 'صلاحیت درخواست رد شد.')
+    else:
+        booking.admin_approved = True
+        booking.save(update_fields=['admin_approved', 'confirmed_by', 'confirmed_at'])
+        messages.success(request, 'صلاحیت درخواست تأیید شد و برای سرویس دهنده ارسال گردید.')
     return redirect('admin_panel')
 
 
 @role_required(Profile.WORKER)
 def worker_profile(request):
-    worker, _ = WorkerProfile.objects.get_or_create(profile=request.user.profile)
+    worker, _ = WorkerProfile.objects.get_or_create(user=request.user)
     if request.method == 'POST':
         selected_services = {int(item) for item in request.POST.getlist('services') if item.isdigit()}
         selected_cities = {int(item) for item in request.POST.getlist('cities') if item.isdigit()}
@@ -367,30 +394,29 @@ def worker_profile(request):
 
 @role_required(Profile.WORKER)
 def worker_jobs(request):
-    worker = get_object_or_404(WorkerProfile, profile=request.user.profile)
-    jobs = worker.jobs.select_related('service', 'city', 'farmer__profile').order_by('-created_at')
+    worker = get_object_or_404(WorkerProfile, user=request.user)
+    jobs = (
+        worker.jobs.filter(admin_approved=True)
+        .select_related('service', 'city', 'farmer__profile', 'review')
+        .order_by('-created_at')
+    )
     return render(request, 'marketplace/worker_jobs.html', {'jobs': jobs, 'worker': worker})
 
 
 @require_POST
 @role_required(Profile.WORKER)
 def job_update(request, pk):
-    worker = get_object_or_404(WorkerProfile, profile=request.user.profile)
-    booking = get_object_or_404(Booking, pk=pk, worker=worker)
+    worker = get_object_or_404(WorkerProfile, user=request.user)
+    booking = get_object_or_404(Booking, pk=pk, worker=worker, admin_approved=True)
     action = request.POST.get('action')
     if action == 'confirm' and booking.status == Booking.PENDING:
         booking.status = Booking.CONFIRMED
         booking.save(update_fields=['status'])
-        messages.success(request, 'درخواست را پذیرفتید.')
+        messages.success(request, 'درخواست را پذیرفتید. صاحب زمین حالا اطلاعات تماس شما را می‌بیند.')
     elif action == 'reject' and booking.status == Booking.PENDING:
         booking.status = Booking.REJECTED
         booking.save(update_fields=['status'])
         messages.success(request, 'درخواست رد شد.')
-    elif action == 'report' and booking.status == Booking.CONFIRMED:
-        booking.status = Booking.REPORTED
-        booking.reported_at = timezone.now()
-        booking.save(update_fields=['status', 'reported_at'])
-        messages.success(request, 'پایان کار اعلام شد. تأیید نهایی با ادمین است.')
     else:
         messages.error(request, 'این تغییر وضعیت ممکن نیست.')
     return redirect('worker_jobs')

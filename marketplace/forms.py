@@ -1,7 +1,7 @@
 import re
 
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 
@@ -36,7 +36,7 @@ class RegisterForm(forms.Form):
         phone = normalize_phone(self.cleaned_data['phone'])
         if not re.fullmatch(r'09\d{9}', phone):
             raise forms.ValidationError('شماره موبایل را با ۰۹ و ۱۱ رقم وارد کنید.')
-        if User.objects.filter(username=phone).exists():
+        if get_user_model().objects.filter(username=phone).exists():
             raise forms.ValidationError('این شماره قبلاً ثبت شده است.')
         return phone
 
@@ -51,15 +51,18 @@ class RegisterForm(forms.Form):
 
     def save(self):
         data = self.cleaned_data
-        user = User.objects.create_user(
+        first_name = data['first_name'].strip()
+        last_name = data['last_name'].strip()
+        user = get_user_model().objects.create_user(
             username=data['phone'],
             password=data['password'],
-            first_name=data['first_name'].strip(),
-            last_name=data['last_name'].strip(),
+            first_name=first_name,
+            last_name=last_name,
+            name=f'{first_name} {last_name}'.strip(),
         )
-        profile = Profile.objects.create(user=user, role=data['role'], phone=data['phone'])
+        Profile.objects.create(user=user, role=data['role'], phone=data['phone'])
         if data['role'] == Profile.WORKER:
-            WorkerProfile.objects.create(profile=profile)
+            WorkerProfile.objects.create(user=user)
         return user
 
 
@@ -108,7 +111,7 @@ class OrderRequestForm(forms.Form):
     def clean_address(self):
         address = self.cleaned_data['address'].strip()
         if len(address) < 8:
-            raise forms.ValidationError('آدرس را دقیق‌تر بنویسید تا کارگر زمین را پیدا کند.')
+            raise forms.ValidationError('آدرس را دقیق‌تر بنویسید تا سرویس دهنده زمین را پیدا کند.')
         return address
 
     def clean_work_date(self):
@@ -134,9 +137,9 @@ class BookForm(OrderRequestForm):
         service = cleaned.get('service')
         city = cleaned.get('city')
         if service and not self.worker.services.filter(pk=service.pk).exists():
-            self.add_error('service', 'این کارگر در حوزه انتخاب‌شده فعالیت نمی‌کند.')
+            self.add_error('service', 'این سرویس دهنده در حوزه انتخاب‌شده فعالیت نمی‌کند.')
         if city and not self.worker.cities.filter(pk=city.pk).exists():
-            self.add_error('city', 'این کارگر در شهر انتخاب‌شده کار نمی‌کند.')
+            self.add_error('city', 'این سرویس دهنده در شهر انتخاب‌شده کار نمی‌کند.')
         return cleaned
 
     def save(self, farmer):
@@ -187,7 +190,7 @@ class FarmerProfileForm(forms.ModelForm):
     def clean_farm_address(self):
         address = self.cleaned_data['farm_address'].strip()
         if len(address) < 8:
-            raise forms.ValidationError('آدرس را دقیق‌تر بنویسید تا کارگر زمین را پیدا کند.')
+            raise forms.ValidationError('آدرس را دقیق‌تر بنویسید تا سرویس دهنده زمین را پیدا کند.')
         return address
 
 

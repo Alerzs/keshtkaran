@@ -1,6 +1,6 @@
 # Production
 
-Keshtkaran runs as a Django app behind Gunicorn. WhiteNoise serves collected static files. The database is a SQLite file at `DB/db.sqlite3`, in a `DB` folder next to `manage.py`.
+Kesht Hamrah runs as a Django app behind Gunicorn. WhiteNoise serves collected static files. The database is a SQLite file at `DB/db.sqlite3`, in a `DB` folder next to `manage.py`.
 
 Local development reads `.env`. A PaaS should set the same variables in its environment. Do not commit `.env`.
 

@@ -1,23 +1,21 @@
 from datetime import timedelta
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from marketplace.models import Category, City, Profile, Review, Service, WorkerProfile
+from marketplace.models import Booking, Category, City, Profile, Review, Service, WorkerProfile
 
 PASSWORD = 'demo1234'
 
 CATEGORIES = [
-    ('کاشت و برداشت', 'planting', 'کاشت، وجین و برداشت محصول در مزرعه و باغ', 'bg-amber-100 text-amber-600', 1),
-    ('آبیاری', 'irrigation', 'آبیاری، اجرای قطره‌ای و تعمیر شبکه آب', 'bg-sky-100 text-sky-600', 2),
-    ('سمپاشی و تغذیه', 'protection', 'سمپاشی، کوددهی و مراقبت از گیاه', 'bg-lime-100 text-lime-700', 3),
-    ('هرس و باغداری', 'orchard', 'هرس، پیوند و نگهداری باغ میوه', 'bg-emerald-100 text-emerald-700', 4),
-    ('ماشین‌آلات', 'machinery', 'شخم، تراکتور و برداشت مکانیزه', 'bg-blue-100 text-blue-700', 5),
-    ('دام و طیور', 'livestock', 'نگهداری دام، شیردوشی و مرغداری', 'bg-orange-100 text-orange-700', 6),
-    ('بسته‌بندی و حمل', 'logistics', 'بسته‌بندی، بارگیری و رساندن محصول', 'bg-indigo-100 text-indigo-700', 7),
-    ('سایر خدمات', 'other', 'نیروی روزمزد و کارهای عمومی مزرعه', 'bg-teal-100 text-teal-700', 8),
+    ('کاشت و برداشت', 'planting', 'کاشت، وجین و برداشت محصول در مزرعه و باغ', 'bg-teal-50 text-soil', 1),
+    ('آبیاری', 'irrigation', 'آبیاری، اجرای قطره‌ای و تعمیر شبکه آب', 'bg-teal-50 text-soil', 2),
+    ('سمپاشی و تغذیه', 'protection', 'سمپاشی، کوددهی و مراقبت از گیاه', 'bg-teal-50 text-soil', 3),
+    ('هرس و باغداری', 'orchard', 'هرس، پیوند و نگهداری باغ میوه', 'bg-teal-50 text-soil', 4),
+    ('ماشین‌آلات', 'machinery', 'شخم، تراکتور و برداشت مکانیزه', 'bg-teal-50 text-soil', 5),
+    ('سایر خدمات', 'other', 'نیروی روزمزد و کارهای عمومی مزرعه', 'bg-teal-50 text-soil', 6),
 ]
 
 SERVICES = [
@@ -35,14 +33,8 @@ SERVICES = [
     ('machinery', 'شخم و دیسک‌زدن', 'tillage', 'آماده‌سازی زمین با گاوآهن و دیسک', 1100000, 'from-stone-500 to-amber-700', True, 12),
     ('machinery', 'راننده تراکتور', 'tractor-driver', 'راننده آشنا به ادوات و کار در قطعه کشاورزی', 1300000, 'from-blue-500 to-indigo-600', False, 13),
     ('machinery', 'برداشت با کمباین', 'combine', 'برداشت مکانیزه غله با کمباین', 1500000, 'from-amber-500 to-yellow-600', True, 14),
-    ('livestock', 'نگهداری دام', 'livestock-care', 'علوفه‌دهی، تمیز کردن جایگاه و مراقبت روزانه', 700000, 'from-orange-400 to-amber-500', False, 15),
-    ('livestock', 'شیردوشی', 'milking', 'شیردوشی بهداشتی نوبت صبح یا عصر', 650000, 'from-orange-300 to-rose-400', False, 16),
-    ('livestock', 'مرغداری و طیور', 'poultry', 'دان‌دهی، جمع‌آوری تخم و کنترل سالن', 680000, 'from-yellow-400 to-orange-500', False, 17),
-    ('logistics', 'بسته‌بندی محصول', 'packing', 'سورت و بسته‌بندی میوه، صیفی یا غله', 600000, 'from-indigo-400 to-violet-500', False, 18),
-    ('logistics', 'حمل محصول', 'hauling', 'رساندن محصول به بازار، سردخانه یا سیلو', 1100000, 'from-indigo-500 to-blue-600', True, 19),
-    ('logistics', 'بارگیری و تخلیه', 'loading', 'بار زدن گونی، جعبه و فله از سر زمین', 550000, 'from-violet-400 to-indigo-500', False, 20),
-    ('other', 'کارگر روزمزد مزرعه', 'day-labor', 'نیروی عمومی برای کارهایی که همان روز پیش می‌آید', 500000, 'from-teal-400 to-cyan-500', True, 21),
-    ('other', 'نگهبانی مزرعه', 'farm-guard', 'نگهبانی شیفتی از زمین، انبار یا باغ', 450000, 'from-slate-500 to-teal-700', False, 22),
+    ('other', 'سرویس دهنده روزمزد مزرعه', 'day-labor', 'نیروی عمومی برای کارهایی که همان روز پیش می‌آید', 500000, 'from-teal-400 to-cyan-500', True, 15),
+    ('other', 'نگهبانی مزرعه', 'farm-guard', 'نگهبانی شیفتی از زمین، انبار یا باغ', 450000, 'from-slate-500 to-teal-700', False, 16),
 ]
 
 CITIES = [
@@ -84,16 +76,13 @@ WORKERS = [
     ('09130000003', 'حسین', 'کریمی', 'سمپاشی باغ مرکبات و غلات، و کوددهی بر اساس آزمون خاک. مرودشت و شیراز را پوشش می‌دهم.', 9, 900000, 61, True, ['spraying', 'fertilizing', 'weeding'], ['شیراز', 'مرودشت']),
     ('09130000004', 'مهدی', 'رضایی', 'راننده تراکتور با پانزده سال سابقه شخم، دیسک و کار با کمباین در زمین‌های اصفهان.', 15, 1400000, 110, True, ['tractor-driver', 'tillage', 'combine'], ['اصفهان']),
     ('09130000005', 'جواد', 'اکبری', 'هرس و پیوند درختان سیب و انگور. کار برداشت میوه را هم با تیم کوچک انجام می‌دهم.', 11, 920000, 73, True, ['pruning', 'grafting', 'fruit-picking'], ['تبریز', 'ارومیه']),
-    ('09130000006', 'سعید', 'نوری', 'چیدن سیب و انگور و سورت اولیه محصول. برای باغ‌های ارومیه و تبریز آماده‌ام.', 6, 760000, 40, True, ['fruit-picking', 'packing', 'loading'], ['ارومیه', 'تبریز']),
+    ('09130000006', 'سعید', 'نوری', 'چیدن سیب و انگور برای باغ‌های ارومیه و تبریز. وجین و هرس سبک را هم انجام می‌دهم.', 6, 760000, 40, True, ['fruit-picking', 'pruning', 'weeding'], ['ارومیه', 'تبریز']),
     ('09130000007', 'امیر', 'قاسمی', 'کوددهی مزارع شمال و سمپاشی به‌موقع. آبیاری سنتی مزرعه را هم بلد هستم.', 8, 800000, 48, True, ['fertilizing', 'spraying', 'classic-irrigation'], ['گرگان', 'ساری']),
-    ('09130000008', 'محمد', 'جعفری', 'حمل محصول از سر زمین تا سیلو یا میدان بار خوزستان، همراه بارگیری گونی و جعبه.', 10, 1150000, 90, True, ['hauling', 'loading', 'packing'], ['اهواز', 'دزفول']),
-    ('09130000009', 'کامران', 'عباسی', 'نگهداری گوسفند و گاو شیری و شیردوشی نوبتی. در روستاهای همدان کار می‌کنم.', 14, 730000, 67, True, ['livestock-care', 'milking', 'poultry'], ['همدان']),
     ('09130000010', 'یوسف', 'مرادی', 'وجین پسته و کار روزمزد باغ. کاشت نهال را هم در کرمان و رفسنجان انجام می‌دهم.', 5, 640000, 28, False, ['weeding', 'day-labor', 'transplanting'], ['کرمان', 'رفسنجان']),
     ('09130000011', 'حسن', 'موسوی', 'برداشت کمباینی غله در دشت قزوین و زنجان. خودم راننده و هماهنگ‌کننده دستگاه هستم.', 18, 1550000, 140, True, ['combine', 'wheat-harvest', 'tractor-driver'], ['قزوین', 'زنجان']),
     ('09130000012', 'ابراهیم', 'صالحی', 'آبیاری قطره‌ای باغ چای و مرکبات، سمپاشی و هرس سبک در گیلان و مازندران.', 9, 870000, 52, True, ['drip-irrigation', 'spraying', 'pruning'], ['رشت', 'ساری']),
-    ('09130000013', 'مجید', 'کاظمی', 'کارگر برداشت و نیروی روزمزد. در فصل درو مشهد و نیشابور حاضر می‌شوم.', 4, 560000, 22, False, ['wheat-harvest', 'day-labor', 'loading'], ['مشهد', 'نیشابور']),
+    ('09130000013', 'مجید', 'کاظمی', 'سرویس دهنده برداشت و نیروی روزمزد. در فصل درو مشهد و نیشابور حاضر می‌شوم.', 4, 560000, 22, False, ['wheat-harvest', 'day-labor', 'weeding'], ['مشهد', 'نیشابور']),
     ('09130000014', 'ناصر', 'حیدری', 'سمپاشی و تغذیه مزارع اصفهان. با سمپاش فرغونی و پشتی کار می‌کنم.', 8, 840000, 45, True, ['spraying', 'fertilizing'], ['اصفهان']),
-    ('09130000015', 'کریم', 'احمدی', 'بارگیری و حمل محصول از باغ‌های شیراز به سردخانه و میدان بار.', 7, 990000, 38, True, ['hauling', 'loading', 'packing'], ['شیراز', 'مرودشت']),
 ]
 
 REVIEW_TEXTS = [
@@ -110,7 +99,7 @@ AUTHORS = [
 
 
 class Command(BaseCommand):
-    help = 'شهرها، خدمات و کارگران نمونه کشت‌کاران را می‌سازد.'
+    help = 'شهرها، خدمات و سرویس دهندگان نمونه کشت همراه را می‌سازد.'
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -143,6 +132,10 @@ class Command(BaseCommand):
             )
             services[slug] = service
 
+        obsolete = Category.objects.filter(slug__in=('livestock', 'logistics'))
+        Booking.objects.filter(service__category__in=obsolete).delete()
+        obsolete.delete()
+
         cities = {}
         for name, province, featured, order in CITIES:
             city, _ = City.objects.update_or_create(
@@ -157,9 +150,10 @@ class Command(BaseCommand):
 
         self._user('09121111111', 'سامان', 'کریمی', Profile.FARMER)
         self._user('09124444444', 'لیلا', 'احمدی', Profile.ADMIN)
+        User = get_user_model()
         admin, created = User.objects.get_or_create(
             username='admin',
-            defaults={'is_staff': True, 'is_superuser': True, 'first_name': 'مدیر'},
+            defaults={'is_staff': True, 'is_superuser': True, 'first_name': 'مدیر', 'name': 'مدیر'},
         )
         admin.is_staff = True
         admin.is_superuser = True
@@ -170,7 +164,7 @@ class Command(BaseCommand):
             phone, first, last, bio, years, wage, jobs, verified, service_slugs, city_names = item
             user = self._user(phone, first, last, Profile.WORKER)
             worker, _ = WorkerProfile.objects.update_or_create(
-                profile=user.profile,
+                user=user,
                 defaults={
                     'bio': bio,
                     'experience_years': years,
@@ -183,9 +177,11 @@ class Command(BaseCommand):
             worker.services.set([services[slug] for slug in service_slugs])
             worker.cities.set([cities[name] for name in city_names])
 
+        User.objects.filter(username__in=('09130000008', '09130000009', '09130000015')).delete()
+
         Review.objects.filter(booking__isnull=True).delete()
         now = timezone.now()
-        for index, worker in enumerate(WorkerProfile.objects.select_related('profile__user')):
+        for index, worker in enumerate(WorkerProfile.objects.select_related('user')):
             for offset in (0, 2):
                 rating, comment = REVIEW_TEXTS[(index + offset) % len(REVIEW_TEXTS)]
                 review = Review.objects.create(
@@ -204,9 +200,15 @@ class Command(BaseCommand):
         self.stdout.write('Django admin: admin / demo1234')
 
     def _user(self, phone, first, last, role):
-        user, _ = User.objects.get_or_create(username=phone, defaults={'first_name': first, 'last_name': last})
+        User = get_user_model()
+        name = f'{first} {last}'.strip()
+        user, _ = User.objects.get_or_create(
+            username=phone,
+            defaults={'first_name': first, 'last_name': last, 'name': name},
+        )
         user.first_name = first
         user.last_name = last
+        user.name = name
         user.set_password(PASSWORD)
         user.save()
         Profile.objects.update_or_create(user=user, defaults={'role': role, 'phone': phone})

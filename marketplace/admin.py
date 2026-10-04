@@ -1,6 +1,7 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from .models import Booking, Category, City, Profile, Review, Service, WorkerProfile
+from .models import Booking, Category, City, Profile, Review, Service, User, WorkerProfile
 
 
 @admin.register(City)
@@ -26,36 +27,49 @@ class ServiceAdmin(admin.ModelAdmin):
 
 class WorkerInline(admin.StackedInline):
     model = WorkerProfile
+    fk_name = 'user'
     filter_horizontal = ('services', 'cities')
     extra = 0
+
+
+@admin.register(User)
+class UserAdmin(DjangoUserAdmin):
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('اطلاعات شخصی', {'fields': ('name', 'first_name', 'last_name', 'email')}),
+        ('دسترسی‌ها', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('تاریخ‌ها', {'fields': ('last_login', 'date_joined')}),
+    )
+    list_display = ('username', 'name', 'is_staff')
+    search_fields = ('username', 'name', 'first_name', 'last_name')
+    inlines = [WorkerInline]
 
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'role', 'phone', 'farm_city')
     list_filter = ('role',)
-    search_fields = ('phone', 'user__first_name', 'user__last_name')
-    inlines = [WorkerInline]
+    search_fields = ('phone', 'user__name', 'user__first_name', 'user__last_name')
 
 
 @admin.register(WorkerProfile)
 class WorkerProfileAdmin(admin.ModelAdmin):
-    list_display = ('profile', 'daily_wage', 'rating', 'is_verified', 'is_active')
+    list_display = ('user', 'daily_wage', 'rating', 'is_verified', 'is_active')
     list_filter = ('is_verified', 'is_active', 'cities')
-    search_fields = ('profile__user__first_name', 'profile__user__last_name', 'profile__phone')
+    search_fields = ('user__name', 'user__first_name', 'user__last_name', 'user__profile__phone')
     filter_horizontal = ('services', 'cities')
     actions = ('verify_workers',)
 
-    @admin.action(description='تأیید هویت کارگران انتخاب‌شده')
+    @admin.action(description='تأیید هویت سرویس دهندگان انتخاب‌شده')
     def verify_workers(self, request, queryset):
         queryset.update(is_verified=True)
 
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'farmer', 'worker', 'service', 'city', 'work_date', 'status')
-    list_filter = ('status', 'city', 'service')
-    search_fields = ('address', 'farmer__username', 'worker__profile__phone')
+    list_display = ('id', 'farmer', 'worker', 'service', 'city', 'work_date', 'status', 'admin_approved')
+    list_filter = ('status', 'admin_approved', 'city', 'service')
+    search_fields = ('address', 'farmer__username', 'farmer__name', 'worker__user__profile__phone')
 
 
 @admin.register(Review)

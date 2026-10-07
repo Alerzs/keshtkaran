@@ -25,7 +25,11 @@
     <h2 class="mt-6 text-sm font-bold">حوزه کاری</h2>
     <div class="mt-2 flex flex-wrap gap-2">
       {% for service in worker.services.all %}
-        <a href="{% url 'order' service.slug %}" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">{{ service.name }}</a>
+        {% if current_profile.role == 'worker' %}
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">{{ service.name }}</span>
+        {% else %}
+          <a href="{% url 'order' service.slug %}" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">{{ service.name }}</a>
+        {% endif %}
       {% empty %}
         <span class="text-sm text-slate-400">هنوز حوزه‌ای ثبت نشده است.</span>
       {% endfor %}
@@ -36,9 +40,11 @@
         <span class="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800">{{ city.name }}، {{ city.province }}</span>
       {% endfor %}
     </div>
-    {% if worker.is_active %}
+    {% if worker.is_active and current_profile.role != 'worker' %}
       <a href="{% url 'book' worker.pk %}?{{ request.GET.urlencode }}" class="mt-6 inline-flex rounded-2xl bg-teal-600 px-6 py-3 text-sm font-bold text-white hover:bg-teal-700">رزرو این سرویس دهنده</a>
-    {% else %}
+    {% elif current_profile.role == 'worker' %}
+      <p class="mt-6 text-sm text-slate-500">ثبت درخواست برای صاحبان زمین است. درخواست‌های رسیده را از کارهای من تأیید کنید.</p>
+    {% elif not worker.is_active %}
       <p class="mt-6 text-sm text-slate-500">این سرویس دهنده فعلاً سفارش جدید نمی‌پذیرد.</p>
     {% endif %}
   </article>
@@ -49,7 +55,7 @@
       {% for review in worker.reviews.all %}
         <article class="rounded-2xl bg-white p-4 shadow-sm">
           <div class="flex items-center justify-between text-sm">
-            <span class="font-semibold">{{ review.author_name }}</span>
+            <a href="{% url 'farmer_public' review.farmer.pk %}" class="font-semibold text-teal-800 hover:text-teal-700">{{ review.farmer.get_full_name }}</a>
             <span class="text-amber-500">★ {{ review.rating|fa_digits }}</span>
           </div>
           <p class="mt-2 text-sm leading-7 text-slate-600">{{ review.comment }}</p>

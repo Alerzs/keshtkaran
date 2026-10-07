@@ -24,7 +24,9 @@
       <p class="mt-2 text-sm font-semibold text-teal-700">{{ booking.wage|toman }} در روز</p>
       {% if booking.shows_worker_contact %}
         <div class="mt-4 rounded-2xl bg-teal-50 p-4">
-          <p class="text-sm font-extrabold text-slate-800">{{ booking.worker.user.get_full_name }}</p>
+          <p class="text-sm font-extrabold text-slate-800">
+            <a href="{% url 'worker_detail' booking.worker.pk %}" class="hover:text-teal-700">{{ booking.worker.user.get_full_name }}</a>
+          </p>
           <p class="mt-1 text-xs text-slate-600">
             ★ {{ booking.worker.rating|floatformat:1|fa_digits }}
             · {{ booking.worker.experience_years|fa_digits }} سال سابقه

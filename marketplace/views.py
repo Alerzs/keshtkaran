@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.paginator import Paginator
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -14,7 +14,7 @@ from .forms import (
     BookForm, FarmerProfileForm, LoginForm, OrderRequestForm, RegisterForm, ReviewForm, WorkerSettingsForm,
 )
 from .geo import city_centers
-from .models import Booking, Category, City, Profile, Review, Service, WorkerProfile
+from .models import Booking, Category, City, Profile, Review, Service, User, WorkerProfile
 
 
 def role_required(role):
@@ -55,7 +55,7 @@ def home(request):
             .order_by('-rating', '-jobs_done')[:4]
         ),
         'reviews': (
-            Review.objects.select_related('worker__user__profile')
+            Review.objects.select_related('farmer', 'worker__user__profile')
             .prefetch_related('worker__cities')[:6]
         ),
         'featured_cities': City.objects.filter(is_featured=True).order_by('featured_order'),
@@ -79,9 +79,15 @@ def category_detail(request, slug):
 
 
 def order_service(request, slug):
+    profile = getattr(request.user, 'profile', None) if request.user.is_authenticated else None
+    if profile and profile.role == Profile.WORKER:
+        messages.error(
+            request,
+            'ثبت درخواست فقط برای صاحبان زمین است. درخواست‌های رسیده را از کارهای من تأیید کنید.',
+        )
+        return redirect('worker_jobs')
     service = get_object_or_404(Service.objects.select_related('category'), slug=slug)
     initial = {}
-    profile = getattr(request.user, 'profile', None) if request.user.is_authenticated else None
     if profile and profile.role == Profile.FARMER:
         if profile.farm_city_id:
             initial['city'] = profile.farm_city_id
@@ -163,7 +169,11 @@ def workers(request):
 
 def worker_detail(request, pk):
     worker = get_object_or_404(
-        WorkerProfile.objects.select_related('user__profile').prefetch_related('services', 'cities', 'reviews'),
+        WorkerProfile.objects.select_related('user__profile').prefetch_related(
+            'services',
+            'cities',
+            Prefetch('reviews', queryset=Review.objects.select_related('farmer')),
+        ),
         pk=pk,
     )
     return render(request, 'marketplace/worker_detail.html', {
@@ -276,7 +286,7 @@ def booking_review(request, pk):
         Review.objects.create(
             booking=booking,
             worker=booking.worker,
-            author_name=request.user.get_full_name(),
+            farmer=request.user,
             rating=form.cleaned_data['rating'],
             comment=form.cleaned_data['comment'].strip(),
         )
@@ -285,6 +295,48 @@ def booking_review(request, pk):
     else:
         messages.error(request, 'امتیاز و متن نظر را کامل کنید.')
     return redirect('bookings')
+
+
+def _farmer_viewer(request, farmer):
+    if not request.user.is_authenticated:
+        return False, []
+    if request.user.pk == farmer.pk:
+        return True, []
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.role == Profile.ADMIN:
+        return True, []
+    worker = WorkerProfile.objects.filter(user=request.user).first()
+    if worker is None:
+        return False, []
+    jobs = list(
+        worker.jobs.filter(farmer=farmer, admin_approved=True)
+        .select_related('service', 'city')
+        .order_by('-created_at')
+    )
+    return bool(jobs), jobs
+
+
+def farmer_public(request, pk):
+    farmer = get_object_or_404(
+        User.objects.select_related('profile__farm_city'),
+        pk=pk,
+        profile__role=Profile.FARMER,
+    )
+    can_see_contact, shared_jobs = _farmer_viewer(request, farmer)
+    reviews = (
+        Review.objects.filter(farmer=farmer)
+        .select_related('worker__user', 'booking__service')
+        .order_by('-created_at')[:12]
+    )
+    return render(request, 'marketplace/farmer_public.html', {
+        'farmer': farmer,
+        'profile': farmer.profile,
+        'can_see_contact': can_see_contact,
+        'shared_jobs': shared_jobs,
+        'reviews': reviews,
+        'completed_jobs': farmer.bookings.filter(status=Booking.DONE).count(),
+        'is_self': request.user.is_authenticated and request.user.pk == farmer.pk,
+    })
 
 
 @role_required(Profile.FARMER)

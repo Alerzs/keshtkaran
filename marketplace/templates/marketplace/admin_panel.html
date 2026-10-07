@@ -23,8 +23,10 @@
           <div>
             <h2 class="font-extrabold">{{ booking.service.name }}</h2>
             <p class="mt-1 text-sm text-slate-500">
-              صاحب زمین: {{ booking.farmer.get_full_name }}
-              · سرویس دهنده: {{ booking.worker.user.get_full_name }}
+              صاحب زمین:
+              <a href="{% url 'farmer_public' booking.farmer.pk %}" class="font-semibold text-teal-800 hover:text-teal-700">{{ booking.farmer.get_full_name }}</a>
+              · سرویس دهنده:
+              <a href="{% url 'worker_detail' booking.worker.pk %}" class="font-semibold text-teal-800 hover:text-teal-700">{{ booking.worker.user.get_full_name }}</a>
               · {{ booking.city.name }}
               · {{ booking.work_date|date:"Y/m/d"|fa_digits }}
             </p>
@@ -37,7 +39,8 @@
         <p class="mt-2 text-sm font-semibold text-teal-700">{{ booking.wage|toman }} در روز</p>
         <p class="mt-2 text-xs text-slate-500">
           صاحب زمین: <span dir="ltr">{{ booking.farmer.profile.phone|fa_digits }}</span>
-          · سرویس دهنده: {{ booking.worker.user.get_full_name }}
+          · سرویس دهنده:
+          <a href="{% url 'worker_detail' booking.worker.pk %}" class="font-semibold text-teal-800 hover:text-teal-700">{{ booking.worker.user.get_full_name }}</a>
           · <span dir="ltr">{{ booking.worker.user.profile.phone|fa_digits }}</span>
         </p>
         {% if booking.confirmed_by %}

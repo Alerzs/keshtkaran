@@ -398,7 +398,10 @@ class Review(models.Model):
         Booking, null=True, blank=True, on_delete=models.CASCADE, related_name='review',
     )
     worker = models.ForeignKey(WorkerProfile, on_delete=models.CASCADE, related_name='reviews')
-    author_name = models.CharField(max_length=80)
+    farmer = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='reviews', verbose_name='صاحب زمین',
+        limit_choices_to={'profile__role': Profile.FARMER},
+    )
     rating = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     comment = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
@@ -409,4 +412,4 @@ class Review(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.author_name} — {self.rating}'
+        return f'{self.farmer.get_full_name()} — {self.rating}'

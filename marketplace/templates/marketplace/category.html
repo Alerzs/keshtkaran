@@ -7,6 +7,10 @@
     <a href="{% url 'services' %}" class="text-xs font-semibold text-teal-700">همه خدمات</a>
     <h1 class="mt-2 text-2xl font-extrabold">{{ category.name }}</h1>
     <p class="mt-2 text-sm text-slate-600">{{ category.description }}</p>
+    {% if current_profile.role == 'worker' %}
+      <p class="mt-3 text-sm text-slate-600">ثبت درخواست این خدمات برای صاحبان زمین است.</p>
+      <a href="{% url 'worker_jobs' %}" class="mt-3 inline-block text-sm font-semibold text-teal-700">تأیید درخواست‌های رسیده</a>
+    {% endif %}
   </div>
 </section>
 <section class="mx-auto grid max-w-6xl gap-4 px-4 py-8">
@@ -17,7 +21,9 @@
         <p class="mt-1 text-sm leading-7 text-slate-500">{{ service.description }}</p>
         <p class="mt-2 text-xs font-semibold text-teal-700">شروع از {{ service.base_price|toman }} در روز</p>
       </div>
-      <a href="{{ service.get_absolute_url }}" class="shrink-0 rounded-2xl bg-teal-600 px-5 py-3 text-center text-sm font-bold text-white hover:bg-teal-700">انتخاب و ادامه</a>
+      {% if current_profile.role != 'worker' %}
+        <a href="{{ service.get_absolute_url }}" class="shrink-0 rounded-2xl bg-teal-600 px-5 py-3 text-center text-sm font-bold text-white hover:bg-teal-700">انتخاب و ادامه</a>
+      {% endif %}
     </article>
   {% endfor %}
 </section>

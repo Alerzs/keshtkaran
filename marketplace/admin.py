@@ -74,5 +74,6 @@ class BookingAdmin(admin.ModelAdmin):
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
-    list_display = ('author_name', 'worker', 'rating', 'created_at')
+    list_display = ('farmer', 'worker', 'rating', 'created_at')
     list_filter = ('rating',)
+    search_fields = ('farmer__name', 'farmer__username', 'comment')

@@ -17,7 +17,10 @@
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 class="font-extrabold">{{ job.service.name }}</h2>
-          <p class="mt-1 text-sm text-slate-500">{{ job.farmer.get_full_name }} · {{ job.city.name }} · {{ job.work_date|date:"Y/m/d"|fa_digits }}</p>
+          <p class="mt-1 text-sm text-slate-500">
+            <a href="{% url 'farmer_public' job.farmer.pk %}" class="font-semibold text-teal-800 hover:text-teal-700">{{ job.farmer.get_full_name }}</a>
+            · {{ job.city.name }} · {{ job.work_date|date:"Y/m/d"|fa_digits }}
+          </p>
         </div>
         <span class="rounded-full px-3 py-1 text-xs font-bold {{ job.status_classes }}">{{ job.get_status_display }}</span>
       </div>

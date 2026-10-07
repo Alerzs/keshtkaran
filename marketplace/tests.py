@@ -22,6 +22,7 @@ class MarketplaceFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'کشت همراه')
         self.assertContains(response, 'برداشت گندم و جو')
+        self.assertContains(response, reverse('order', args=['wheat-harvest']))
 
     def test_suggests_workers_by_service_and_city(self):
         city = City.objects.get(name='مشهد')
@@ -71,6 +72,35 @@ class MarketplaceFlowTests(TestCase):
         other = User.objects.get(username='09130000002').worker
         response = self.client.get(reverse('book', args=[other.pk]))
         self.assertRedirects(response, reverse('home'))
+
+    def test_worker_cannot_start_a_service_request_from_home(self):
+        self.client.login(username='09130000001', password='demo1234')
+        other = User.objects.get(username='09130000002').worker
+        home = self.client.get(reverse('home'))
+        self.assertNotContains(home, reverse('order', args=['wheat-harvest']))
+        self.assertContains(home, 'ثبت درخواست جدید برای صاحبان زمین است')
+
+        category = self.client.get(reverse('category', args=['planting']))
+        self.assertNotContains(category, 'انتخاب و ادامه')
+        self.assertNotContains(category, reverse('order', args=['wheat-harvest']))
+
+        listing = self.client.get(reverse('workers'))
+        self.assertNotContains(listing, reverse('book', args=[other.pk]))
+
+        detail = self.client.get(reverse('worker_detail', args=[other.pk]))
+        self.assertNotContains(detail, reverse('book', args=[other.pk]))
+        self.assertNotContains(detail, reverse('order', args=['classic-irrigation']))
+
+        city = City.objects.get(name='شیراز')
+        response = self.client.post(reverse('order', args=['spraying']), {
+            'city': city.pk,
+            'address': 'جاده مرودشت، قطعه جنوبی باغ',
+            'work_date': (timezone.localdate() + timedelta(days=2)).isoformat(),
+            'land_area': '1.5',
+            'note': 'نباید ثبت شود',
+        })
+        self.assertRedirects(response, reverse('worker_jobs'))
+        self.assertEqual(Booking.objects.count(), 0)
 
     def test_worker_list_renders_pages(self):
         response = self.client.get(reverse('workers'))
@@ -167,6 +197,7 @@ class MarketplaceFlowTests(TestCase):
         revealed = self.client.get(reverse('bookings'))
         self.assertContains(revealed, '09130000001')
         self.assertContains(revealed, 'رضا محمدی')
+        self.assertContains(revealed, reverse('worker_detail', args=[worker_profile.pk]))
         self.assertContains(revealed, 'اتمام کار')
         self.assertNotContains(revealed, 'ادمین')
         self.client.post(reverse('booking_complete', args=[booking.pk]))
@@ -179,7 +210,8 @@ class MarketplaceFlowTests(TestCase):
             'comment': 'کار تمیز و به‌موقع بود',
         })
         self.assertRedirects(reviewed, reverse('bookings'))
-        self.assertTrue(Review.objects.filter(booking=booking, comment='کار تمیز و به‌موقع بود').exists())
+        review = Review.objects.get(booking=booking, comment='کار تمیز و به‌موقع بود')
+        self.assertEqual(review.farmer.username, '09121111111')
         finished = self.client.get(reverse('bookings'))
         self.assertContains(finished, 'کار تمیز و به‌موقع بود')
         self.assertContains(finished, '09130000001')
@@ -221,6 +253,60 @@ class MarketplaceFlowTests(TestCase):
         self.assertContains(response, 'مراحل ثبت سفارش')
         self.assertContains(response, 'خدمت و آدرس')
         self.assertContains(response, 'aria-current="step"')
+
+    def test_clicking_a_person_opens_their_profile(self):
+        farmer = User.objects.get(username='09121111111')
+        worker = User.objects.get(username='09130000001').worker
+        farmer_url = reverse('farmer_public', args=[farmer.pk])
+        worker_url = reverse('worker_detail', args=[worker.pk])
+
+        public_page = self.client.get(farmer_url)
+        self.assertContains(public_page, 'سامان کریمی')
+        self.assertContains(public_page, 'صاحب زمین')
+        self.assertNotContains(public_page, '۰۹۱۲۱۱۱۱۱۱۱')
+        self.assertEqual(self.client.get(reverse('farmer_public', args=[worker.user.pk])).status_code, 404)
+
+        home = self.client.get(reverse('home'))
+        featured = home.context['featured_workers'][0]
+        self.assertContains(home, reverse('worker_detail', args=[featured.pk]))
+        city = City.objects.get(name='مشهد')
+        listing = self.client.get(reverse('workers'), {'service': 'wheat-harvest', 'city': city.pk})
+        self.assertContains(listing, worker_url)
+
+        self.client.login(username='09121111111', password='demo1234')
+        own_page = self.client.get(farmer_url)
+        self.assertContains(own_page, '۰۹۱۲۱۱۱۱۱۱۱')
+        self.assertContains(own_page, 'ویرایش پروفایل')
+        self.client.logout()
+
+    def test_farmer_contact_is_visible_to_the_assigned_worker(self):
+        booking, worker_profile = self._book_sample()
+        farmer = User.objects.get(username='09121111111')
+        farmer_url = reverse('farmer_public', args=[farmer.pk])
+        worker_url = reverse('worker_detail', args=[worker_profile.pk])
+
+        self.client.login(username='09130000001', password='demo1234')
+        hidden = self.client.get(farmer_url)
+        self.assertContains(hidden, 'سامان کریمی')
+        self.assertNotContains(hidden, '۰۹۱۲۱۱۱۱۱۱۱')
+        self.assertNotContains(hidden, 'جاده کلات')
+        self.client.logout()
+
+        self.client.login(username='09124444444', password='demo1234')
+        self.client.post(reverse('admin_approve', args=[booking.pk]), {'action': 'approve'})
+        panel = self.client.get(reverse('admin_panel'))
+        self.assertContains(panel, farmer_url)
+        self.assertContains(panel, worker_url)
+        admin_view = self.client.get(farmer_url)
+        self.assertContains(admin_view, '۰۹۱۲۱۱۱۱۱۱۱')
+        self.client.logout()
+
+        self.client.login(username='09130000001', password='demo1234')
+        jobs = self.client.get(reverse('worker_jobs'))
+        self.assertContains(jobs, farmer_url)
+        visible = self.client.get(farmer_url)
+        self.assertContains(visible, '۰۹۱۲۱۱۱۱۱۱۱')
+        self.assertContains(visible, 'جاده کلات، کیلومتر ۱۲، قطعه نمونه')
 
     def test_guest_booking_goes_to_login(self):
         worker = User.objects.get(username='09130000001').worker

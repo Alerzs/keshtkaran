@@ -93,8 +93,16 @@ REVIEW_TEXTS = [
     (4, 'دستمزدش با کیفیت کار جور بود و قطعه را مرتب تحویل داد.'),
 ]
 AUTHORS = [
-    'مزرعه سبزدشت', 'حسین یوسفی', 'باغ سیب مهربان', 'فاطمه نادری', 'تعاونی دشت طلا',
-    'رضا کیانی', 'باغستان نمونه', 'مریم صالحی', 'مزرعه شمال', 'احمد توکلی',
+    ('09122000001', 'مزرعه', 'سبزدشت'),
+    ('09122000002', 'حسین', 'یوسفی'),
+    ('09122000003', 'باغ', 'سیب مهربان'),
+    ('09122000004', 'فاطمه', 'نادری'),
+    ('09122000005', 'تعاونی', 'دشت طلا'),
+    ('09122000006', 'رضا', 'کیانی'),
+    ('09122000007', 'باغستان', 'نمونه'),
+    ('09122000008', 'مریم', 'صالحی'),
+    ('09122000009', 'مزرعه', 'شمال'),
+    ('09122000010', 'احمد', 'توکلی'),
 ]
 
 
@@ -179,6 +187,10 @@ class Command(BaseCommand):
 
         User.objects.filter(username__in=('09130000008', '09130000009', '09130000015')).delete()
 
+        authors = [
+            self._user(phone, first, last, Profile.FARMER)
+            for phone, first, last in AUTHORS
+        ]
         Review.objects.filter(booking__isnull=True).delete()
         now = timezone.now()
         for index, worker in enumerate(WorkerProfile.objects.select_related('user')):
@@ -186,7 +198,7 @@ class Command(BaseCommand):
                 rating, comment = REVIEW_TEXTS[(index + offset) % len(REVIEW_TEXTS)]
                 review = Review.objects.create(
                     worker=worker,
-                    author_name=AUTHORS[index % len(AUTHORS)],
+                    farmer=authors[index % len(authors)],
                     rating=rating,
                     comment=comment,
                 )

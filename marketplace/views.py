@@ -45,7 +45,7 @@ def _safe_next(request, fallback='home'):
 
 def home(request):
     return render(request, 'marketplace/home.html', {
-        'categories': Category.objects.all(),
+        'categories': Category.objects.annotate(service_count=Count('services')),
         'popular_services': Service.objects.filter(is_popular=True).select_related('category'),
         'all_services': Service.objects.all(),
         'featured_workers': (

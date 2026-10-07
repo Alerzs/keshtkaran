@@ -1,39 +1,48 @@
 {% extends "marketplace/base.html" %}
-{% load fa %}
+{% load static fa %}
 
 {% block title %}خدمات جانبی کشاورزی{% endblock %}
 
 {% block content %}
-<section">
+<section>
   <div class="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:py-16">
     <div>
-      <p class="text-sm font-semibold text-clay">دفتر کار مزرعه</p>
-      <h1 class="mt-2 text-5xl leading-tight text-ink sm:text-6xl">سرویس دهنده همان منطقه، برای کار همان زمین</h1>
+      <h1 class="mt-3 text-5xl leading-tight text-ink sm:text-6xl">سرویس دهنده همان منطقه، برای کار همان زمین</h1>
       <p class="mt-4 max-w-xl text-base leading-8 text-muted">نوع خدمت و شهر زمین را مشخص کنید. فقط کسانی پیشنهاد می‌شوند که همان حوزه را کار می‌کنند و در همان شهر فعال‌اند.</p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <a href="{% url 'workers' %}" class="inline-flex items-center gap-1.5 border border-line bg-sheet px-3 py-1.5 text-sm font-semibold text-soil hover:border-clay hover:text-clay">سرویس‌دهندگان</a>
+        <a href="{% url 'services' %}" class="inline-flex items-center gap-1.5 border border-line bg-sheet px-3 py-1.5 text-sm font-semibold text-soil hover:border-clay hover:text-clay">فهرست خدمات</a>
+        <a href="{% url 'about' %}" class="inline-flex items-center gap-1.5 border border-line bg-sheet px-3 py-1.5 text-sm font-semibold text-soil hover:border-clay hover:text-clay">درباره ما</a>
+      </div>
       <form action="{% url 'workers' %}" method="get" class="mt-8 grid gap-3 border border-line bg-sheet p-4 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-end">
-        <div>
+        <div class="relative" data-service-suggest>
           <label for="hero-q" class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-muted">
             <svg class="h-3.5 w-3.5 text-clay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>
             خدمت
           </label>
-          <input id="hero-q" name="q" list="service-names" placeholder="مثلاً هرس، برداشت، آبیاری" class="w-full border border-line bg-paper px-3 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-soil">
+          <input id="hero-q" name="q" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="service-names" placeholder="مثلاً هرس، برداشت، آبیاری" class="w-full border border-line bg-paper px-3 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-soil">
+          <ul id="service-names" data-suggest-list role="listbox" hidden class="service-suggest absolute z-30 mt-1 max-h-56 w-full overflow-y-auto overscroll-contain border border-line bg-sheet">
+            {% for service in all_services %}
+              <li role="option" data-value="{{ service.name }}" class="cursor-pointer px-3 py-2 text-sm text-ink hover:bg-paper">{{ service.name }}</li>
+            {% endfor %}
+          </ul>
         </div>
-        <datalist id="service-names">
-          {% for service in all_services %}
-            <option value="{{ service.name }}"></option>
-          {% endfor %}
-        </datalist>
-        <div>
-          <label for="hero-city" class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-muted">
+        <div class="relative" data-city-select>
+          <label id="hero-city-label" class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-muted">
             <svg class="h-3.5 w-3.5 text-clay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s6-5.2 6-9a6 6 0 1 0-12 0c0 3.8 6 9 6 9z"/><circle cx="12" cy="12" r="2"/></svg>
             شهر زمین
           </label>
-          <select id="hero-city" name="city" class="w-full border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-soil">
-            <option value="">همه شهرها</option>
+          <input type="hidden" name="city" value="" data-city-value>
+          <button type="button" id="hero-city" aria-labelledby="hero-city-label" aria-haspopup="listbox" aria-expanded="false" aria-controls="city-names" class="flex w-full items-center justify-between gap-2 border border-line bg-paper px-3 py-2.5 text-sm text-ink outline-none focus:border-soil">
+            <span data-city-label class="min-w-0 truncate">همه شهرها</span>
+            <svg class="h-3.5 w-3.5 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <ul id="city-names" data-suggest-list role="listbox" aria-labelledby="hero-city-label" hidden class="service-suggest absolute z-30 mt-1 max-h-56 w-full overflow-y-auto overscroll-contain border border-line bg-sheet">
+            <li role="option" data-value="" aria-selected="true" class="cursor-pointer px-3 py-2 text-sm text-ink hover:bg-paper">همه شهرها</li>
             {% for city in cities %}
-              <option value="{{ city.pk }}">{{ city.name }}</option>
+              <li role="option" data-value="{{ city.pk }}" class="cursor-pointer px-3 py-2 text-sm text-ink hover:bg-paper">{{ city.name }}</li>
             {% endfor %}
-          </select>
+          </ul>
         </div>
         <button type="submit" class="inline-flex items-center justify-center gap-2 bg-clay px-5 py-2.5 text-sm font-semibold text-white hover:bg-clay-dark">
           <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>
@@ -52,26 +61,32 @@
         <path d="M40 96h240" stroke="#a34b2d" stroke-width="3"/>
       </svg>
       <dl class="divide-y divide-white/15">
-        <div class="flex items-center justify-between gap-3 py-3">
-          <dt class="flex items-center gap-2 text-sm text-[#e7e0d2]/80">
-            <svg class="h-4 w-4 text-wheat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19"/></svg>
-            سرویس دهنده فعال
-          </dt>
-          <dd class="font-display text-3xl">{{ stats.workers|fa_digits }}</dd>
+        <div>
+          <a href="{% url 'workers' %}" class="flex items-center justify-between gap-3 rounded-xl px-2 py-3 transition hover:bg-white/10">
+            <dt class="flex items-center gap-2 text-sm text-[#e7e0d2]/80">
+              <svg class="h-4 w-4 text-wheat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19"/></svg>
+              سرویس دهنده فعال
+            </dt>
+            <dd class="font-display text-3xl">{{ stats.workers|fa_digits }}</dd>
+          </a>
         </div>
-        <div class="flex items-center justify-between gap-3 py-3">
-          <dt class="flex items-center gap-2 text-sm text-[#e7e0d2]/80">
-            <svg class="h-4 w-4 text-wheat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21V11"/><path d="M12 13c-3.2 0-5.2-2.2-5.2-4.6 2.4.2 4 1.6 5.2 4.6z"/><path d="M12 11.5c0-2.6 2.4-4.4 4.8-3.8-.8 2.2-2.6 3.8-4.8 3.8z"/><path d="M4 21h16"/></svg>
-            نوع خدمت
-          </dt>
-          <dd class="font-display text-3xl">{{ stats.services|fa_digits }}</dd>
+        <div>
+          <a href="{% url 'services' %}" class="flex items-center justify-between gap-3 rounded-xl px-2 py-3 transition hover:bg-white/10">
+            <dt class="flex items-center gap-2 text-sm text-[#e7e0d2]/80">
+              <svg class="h-4 w-4 text-wheat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21V11"/><path d="M12 13c-3.2 0-5.2-2.2-5.2-4.6 2.4.2 4 1.6 5.2 4.6z"/><path d="M12 11.5c0-2.6 2.4-4.4 4.8-3.8-.8 2.2-2.6 3.8-4.8 3.8z"/><path d="M4 21h16"/></svg>
+              نوع خدمت
+            </dt>
+            <dd class="font-display text-3xl">{{ stats.services|fa_digits }}</dd>
+          </a>
         </div>
-        <div class="flex items-center justify-between gap-3 py-3">
-          <dt class="flex items-center gap-2 text-sm text-[#e7e0d2]/80">
-            <svg class="h-4 w-4 text-wheat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s6-5.2 6-9a6 6 0 1 0-12 0c0 3.8 6 9 6 9z"/><circle cx="12" cy="12" r="2"/></svg>
-            شهر محل کار
-          </dt>
-          <dd class="font-display text-3xl">{{ stats.cities|fa_digits }}</dd>
+        <div>
+          <a href="#cities" class="flex items-center justify-between gap-3 rounded-xl px-2 py-3 transition hover:bg-white/10">
+            <dt class="flex items-center gap-2 text-sm text-[#e7e0d2]/80">
+              <svg class="h-4 w-4 text-wheat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s6-5.2 6-9a6 6 0 1 0-12 0c0 3.8 6 9 6 9z"/><circle cx="12" cy="12" r="2"/></svg>
+              شهر محل کار
+            </dt>
+            <dd class="font-display text-3xl">{{ stats.cities|fa_digits }}</dd>
+          </a>
         </div>
       </dl>
     </aside>
@@ -85,99 +100,84 @@
         <svg class="h-7 w-7 text-clay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h7v7H4zM13 4h7v7h-7zM13 13h7v7h-7zM4 16h7v4H4z"/></svg>
         حوزه‌های کار
       </h2>
-      <p class="mt-1 text-sm leading-7 text-muted">هر سرویس دهنده حوزه و شهر محل کارش را خودش در پروفایل ثبت کرده است.</p>
     </div>
     <a href="{% url 'services' %}" class="shrink-0 text-sm font-semibold text-clay hover:text-clay-dark">همه خدمات</a>
   </div>
-  <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+  <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     {% for category in categories %}
-      <a href="{{ category.get_absolute_url }}" class="flex items-center gap-3 border border-line bg-sheet px-4 py-3.5 transition hover:border-clay">
-        {% include "marketplace/partials/category_icon.html" with category=category box_class="h-11 w-11 shrink-0" svg_class="h-5 w-5" %}
-        <span class="text-sm font-semibold leading-6 text-ink">{{ category.name }}</span>
+      <a href="{{ category.get_absolute_url }}" class="group flex h-full gap-4 border border-line bg-sheet p-4">
+        {% include "marketplace/partials/category_icon.html" with category=category box_class="h-12 w-12 shrink-0 transition group-hover:bg-teal-100" svg_class="h-6 w-6" %}
+        <span class="flex min-w-0 flex-1 flex-col">
+          <span class="text-base font-semibold leading-7 text-ink">{{ category.name }}</span>
+          <span class="mt-1 line-clamp-2 text-sm font-normal leading-7 text-muted">{{ category.description }}</span>
+          <span class="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-semibold text-clay">
+            {{ category.service_count|fa_digits }} خدمت
+            <svg class="h-3.5 w-3.5 transition group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+          </span>
+        </span>
       </a>
     {% endfor %}
   </div>
 </section>
 
-<section class="mx-auto mt-16 max-w-6xl px-4">
-  <div class="mb-5 flex flex-col gap-2 border-b border-line pb-3 sm:flex-row sm:items-end sm:justify-between">
-    <h2 class="flex items-center gap-2 text-3xl">
-      <svg class="h-7 w-7 text-clay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3l2.2 5.2L20 9l-4 3.6L17 18l-5-3-5 3 1-5.4L4 9l5.8-.8L12 3z"/></svg>
-      کارهای پرتقاضا
-    </h2>
-    <a href="{% url 'services' %}" class="text-sm font-semibold text-clay hover:text-clay-dark">مشاهده همه</a>
-  </div>
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    {% for service in popular_services %}
-      {% if current_profile.role == 'worker' %}
-        <article class="flex flex-col border border-line bg-sheet p-5">
-      {% else %}
-        <a href="{{ service.get_absolute_url }}" class="group flex flex-col border border-line bg-sheet p-5 transition hover:border-clay">
-      {% endif %}
-        <div class="flex items-start justify-between gap-3">
-          <p class="text-xs font-semibold text-clay">{{ service.category.name }}</p>
-          {% include "marketplace/partials/category_icon.html" with category=service.category box_class="h-10 w-10 shrink-0 rounded-xl" svg_class="h-5 w-5" %}
-        </div>
-        <h3 class="mt-3 text-xl">{{ service.name }}</h3>
-        <p class="mt-2 line-clamp-2 flex-1 text-sm leading-7 text-muted">{{ service.description }}</p>
-        <p class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-soil">
-          شروع از {{ service.base_price|toman }}
-        </p>
-      {% if current_profile.role == 'worker' %}
-        </article>
-      {% else %}
-        </a>
-      {% endif %}
-    {% endfor %}
-  </div>
-</section>
 
 <section class="mx-auto mt-16 max-w-6xl px-4" aria-labelledby="journey-title">
   <div class="border-b border-line pb-3">
-    <p class="text-sm font-semibold text-clay">مسیر کار</p>
     <h2 id="journey-title" class="mt-1 text-3xl">از درخواست تا حضور در زمین</h2>
     <p class="mt-1 max-w-2xl text-sm leading-7 text-muted">چهار گام، از ثبت نوع کار تا روزی که سرویس‌دهنده همان منطقه سر زمین می‌رسد.</p>
   </div>
   <ol class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <li class="flex flex-col border border-line border-t-4 border-t-wheat bg-sheet p-5">
-      <div class="flex items-center justify-between">
-        <span class="grid h-12 w-12 place-items-center rounded-full bg-teal-50 text-soil" aria-hidden="true">
-          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 5.5h8V4.8A1.8 1.8 0 0 0 14.2 3h-4.4A1.8 1.8 0 0 0 8 4.8v.7z"/><path d="M7 5.5H5.8A1.8 1.8 0 0 0 4 7.3v12A1.8 1.8 0 0 0 5.8 21h12.4a1.8 1.8 0 0 0 1.8-1.7v-12a1.8 1.8 0 0 0-1.8-1.8H17"/><path d="M8 11h8M8 15h5"/></svg>
-        </span>
-        <span class="font-display text-4xl leading-none text-wheat">۱</span>
-      </div>
-      <h3 class="mt-4 text-xl">خدمت و آدرس</h3>
-      <p class="mt-2 text-sm leading-7 text-muted">نوع کار، شهر و نشانی دقیق زمین را مشخص کنید.</p>
+    <li>
+      <a href="{% url 'services' %}" class="flex h-full flex-col border border-line border-t-4 border-t-wheat bg-sheet p-5">
+        <div class="flex items-center justify-between">
+          <span class="grid h-12 w-12 place-items-center rounded-full bg-teal-50 text-soil" aria-hidden="true">
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 5.5h8V4.8A1.8 1.8 0 0 0 14.2 3h-4.4A1.8 1.8 0 0 0 8 4.8v.7z"/><path d="M7 5.5H5.8A1.8 1.8 0 0 0 4 7.3v12A1.8 1.8 0 0 0 5.8 21h12.4a1.8 1.8 0 0 0 1.8-1.7v-12a1.8 1.8 0 0 0-1.8-1.8H17"/><path d="M8 11h8M8 15h5"/></svg>
+          </span>
+          <span class="font-display text-4xl leading-none text-wheat">۱</span>
+        </div>
+        <h3 class="mt-4 text-xl">خدمت و آدرس</h3>
+        <p class="mt-2 flex-1 text-sm leading-7 text-muted">نوع کار، شهر و نشانی دقیق زمین را مشخص کنید.</p>
+        <span class="mt-4 text-sm font-semibold text-clay">شروع از خدمات</span>
+      </a>
     </li>
-    <li class="flex flex-col border border-line border-t-4 border-t-wheat bg-sheet p-5">
-      <div class="flex items-center justify-between">
-        <span class="grid h-12 w-12 place-items-center rounded-full bg-teal-50 text-soil" aria-hidden="true">
-          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="2.3"/><circle cx="16.2" cy="9" r="1.8"/><path d="M4.2 18.2c.9-2.6 2.8-3.9 4.8-3.9s3.9 1.3 4.8 3.9"/><path d="M14.2 14.8c1.3-.4 2.7.1 3.6 1.5"/></svg>
-        </span>
-        <span class="font-display text-4xl leading-none text-wheat">۲</span>
-      </div>
-      <h3 class="mt-4 text-xl">پیشنهاد همان منطقه</h3>
-      <p class="mt-2 text-sm leading-7 text-muted">فقط کسانی را می‌بینید که همان حوزه را کار می‌کنند و در همان شهر فعال‌اند.</p>
+    <li>
+      <a href="{% url 'workers' %}" class="flex h-full flex-col border border-line border-t-4 border-t-clay bg-sheet p-5">
+        <div class="flex items-center justify-between">
+          <span class="grid h-12 w-12 place-items-center rounded-full bg-teal-50 text-soil" aria-hidden="true">
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="2.3"/><circle cx="16.2" cy="9" r="1.8"/><path d="M4.2 18.2c.9-2.6 2.8-3.9 4.8-3.9s3.9 1.3 4.8 3.9"/><path d="M14.2 14.8c1.3-.4 2.7.1 3.6 1.5"/></svg>
+          </span>
+          <span class="font-display text-4xl leading-none text-clay">۲</span>
+        </div>
+        <h3 class="mt-4 text-xl">پیشنهاد همان منطقه</h3>
+        <p class="mt-2 flex-1 text-sm leading-7 text-muted">فقط کسانی را می‌بینید که همان حوزه را کار می‌کنند و در همان شهر فعال‌اند.</p>
+        <span class="mt-4 text-sm font-semibold text-clay">دیدن سرویس‌دهندگان</span>
+      </a>
     </li>
-    <li class="flex flex-col border border-line border-t-4 border-t-clay bg-sheet p-5">
-      <div class="flex items-center justify-between">
-        <span class="grid h-12 w-12 place-items-center rounded-full bg-teal-50 text-soil" aria-hidden="true">
-          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3.5V7M16 3.5V7M4 10h16"/><path d="M9 14.5l2 2 4-4"/></svg>
-        </span>
-        <span class="font-display text-4xl leading-none text-wheat">۳</span>
-      </div>
-      <h3 class="mt-4 text-xl">رزرو و هماهنگی</h3>
-      <p class="mt-2 text-sm leading-7 text-muted">سرویس‌دهنده درخواست را می‌پذیرد و برای روز مشخص‌شده هماهنگ می‌شوید.</p>
+    <li>
+      <a href="{% if current_profile.role == 'farmer' %}{% url 'bookings' %}{% elif current_profile.role == 'worker' %}{% url 'worker_jobs' %}{% else %}{% url 'register' %}{% endif %}" class="flex h-full flex-col border border-line border-t-4 border-t-soil bg-sheet p-5">
+        <div class="flex items-center justify-between">
+          <span class="grid h-12 w-12 place-items-center rounded-full bg-teal-50 text-soil" aria-hidden="true">
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3.5V7M16 3.5V7M4 10h16"/><path d="M9 14.5l2 2 4-4"/></svg>
+          </span>
+          <span class="font-display text-4xl leading-none text-soil">۳</span>
+        </div>
+        <h3 class="mt-4 text-xl">رزرو و هماهنگی</h3>
+        <p class="mt-2 flex-1 text-sm leading-7 text-muted">سرویس‌دهنده درخواست را می‌پذیرد و برای روز مشخص‌شده هماهنگ می‌شوید.</p>
+        <span class="mt-4 text-sm font-semibold text-clay">{% if current_profile.role == 'farmer' %}سفارش‌های من{% elif current_profile.role == 'worker' %}کارهای من{% else %}ثبت‌نام{% endif %}</span>
+      </a>
     </li>
-    <li class="flex flex-col bg-soil p-5 text-[#f6f1e6]">
-      <div class="flex items-center justify-between">
-        <span class="grid h-12 w-12 place-items-center rounded-full bg-white/10 text-wheat" aria-hidden="true">
-          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 20h18"/><circle cx="8.5" cy="8" r="1.6"/><path d="M8.5 9.8v4M6.8 12h3.4M7.2 18.6 8.5 13.8l1.3 4.8"/><path d="M16.5 20V12"/><path d="M16.5 13.4c-2.4.1-3.6-1.5-3.4-3.4 2 .2 3 1.7 3.4 3.4z"/><path d="M16.5 14.2c2.3 0 3.5-1.6 3.2-3.5-2 .3-2.8 1.9-3.2 3.5z"/></svg>
-        </span>
-        <span class="font-display text-4xl leading-none text-wheat">۴</span>
-      </div>
-      <h3 class="mt-4 text-xl text-[#f6f1e6]">حضور در زمین</h3>
-      <p class="mt-2 text-sm leading-7 text-[#e7e0d2]/80">در روز هماهنگ‌شده، سرویس‌دهنده همان منطقه سر زمین حاضر می‌شود.</p>
+    <li>
+      <a href="{% url 'about' %}" class="flex h-full flex-col border border-line border-t-4 border-t-teal-300 bg-sheet p-5">
+        <div class="flex items-center justify-between">
+          <span class="grid h-12 w-12 place-items-center rounded-full bg-teal-50 text-soil" aria-hidden="true">
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 20h18"/><circle cx="8.5" cy="8" r="1.6"/><path d="M8.5 9.8v4M6.8 12h3.4M7.2 18.6 8.5 13.8l1.3 4.8"/><path d="M16.5 20V12"/><path d="M16.5 13.4c-2.4.1-3.6-1.5-3.4-3.4 2 .2 3 1.7 3.4 3.4z"/><path d="M16.5 14.2c2.3 0 3.5-1.6 3.2-3.5-2 .3-2.8 1.9-3.2 3.5z"/></svg>
+          </span>
+          <span class="font-display text-4xl leading-none text-teal-300">۴</span>
+        </div>
+        <h3 class="mt-4 text-xl">حضور در زمین</h3>
+        <p class="mt-2 flex-1 text-sm leading-7 text-muted">در روز هماهنگ‌شده، سرویس‌دهنده همان منطقه سر زمین حاضر می‌شود.</p>
+        <span class="mt-4 text-sm font-semibold text-clay">درباره کشت همراه</span>
+      </a>
     </li>
   </ol>
 </section>
@@ -231,7 +231,7 @@
             <p class="truncate text-xs text-muted">
               صاحب زمین
               · درباره <a href="{% url 'worker_detail' review.worker.pk %}" class="font-semibold text-soil hover:text-clay">{{ review.worker.user.get_full_name }}</a>
-              {% for city in review.worker.cities.all %}{% if forloop.first %} · {{ city.name }}{% endif %}{% endfor %}
+              {% for city in review.worker.cities.all %}{% if forloop.first %} · <a href="{% url 'workers' %}?city={{ city.pk }}" class="hover:text-clay">{{ city.name }}</a>{% endif %}{% endfor %}
             </p>
           </div>
         </div>
@@ -243,6 +243,20 @@
 </section>
 
 <section class="mx-auto mt-16 max-w-6xl px-4">
+  <div class="grid gap-4 rounded-[1.25rem] bg-soil p-6 text-[#f6f1e6] shadow-xl sm:grid-cols-[minmax(0,1.4fr)_minmax(16rem,0.8fr)] sm:items-center sm:p-8">
+    <div>
+      <p class="text-sm font-semibold text-wheat">قدم بعد</p>
+      <h2 class="mt-1 text-3xl text-[#f6f1e6]">کار زمین را به سرویس‌دهنده همان شهر بسپارید</h2>
+      <p class="mt-2 max-w-xl text-sm leading-7 text-[#e7e0d2]/80">خدمت را انتخاب کنید، شهر زمین را مشخص کنید و فقط کسانی را ببینید که همان کار را در همان منطقه انجام می‌دهند.</p>
+    </div>
+    <div class="flex flex-col gap-2 sm:items-stretch">
+      <a href="{% url 'workers' %}" class="inline-flex items-center justify-center bg-clay px-5 py-3 text-sm font-semibold text-white hover:bg-clay-dark">پیدا کردن سرویس‌دهنده</a>
+      <a href="{% url 'register' %}?role=worker" class="inline-flex items-center justify-center rounded-xl border border-white/25 px-5 py-3 text-sm font-semibold text-[#f6f1e6] hover:bg-white/10">ثبت‌نام سرویس‌دهنده</a>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto mt-16 max-w-6xl px-4" id="cities">
   <h2 class="flex items-center gap-2 text-3xl">
     <svg class="h-7 w-7 text-clay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21s6-5.2 6-9a6 6 0 1 0-12 0c0 3.8 6 9 6 9z"/><circle cx="12" cy="12" r="2"/></svg>
     شهرهای محل کار
@@ -270,4 +284,8 @@
     {% endfor %}
   </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/home.js' %}"></script>
 {% endblock %}

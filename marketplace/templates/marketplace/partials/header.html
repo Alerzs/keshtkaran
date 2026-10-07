@@ -4,9 +4,10 @@
       {% include "marketplace/partials/logo.html" %}
       کشت همراه
     </a>
-    <nav class="hidden items-center gap-6 text-sm font-medium text-[#e7e0d2]/80 lg:flex">
+    <nav class="hidden items-center gap-5 text-sm font-medium text-[#e7e0d2]/80 lg:flex">
       <a href="{% url 'home' %}" class="hover:text-white {% if request.resolver_match.url_name == 'home' %}text-wheat{% endif %}">خانه</a>
-      <a href="{% url 'services' %}" class="hover:text-white {% if request.resolver_match.url_name == 'services' or request.resolver_match.url_name == 'category' %}text-wheat{% endif %}">خدمات</a>
+      <a href="{% url 'services' %}" class="hover:text-white {% if request.resolver_match.url_name == 'services' or request.resolver_match.url_name == 'category' or request.resolver_match.url_name == 'order' %}text-wheat{% endif %}">خدمات</a>
+      <a href="{% url 'workers' %}" class="hover:text-white {% if request.resolver_match.url_name == 'workers' or request.resolver_match.url_name == 'worker_detail' %}text-wheat{% endif %}">سرویس‌دهندگان</a>
       {% if current_profile.role == 'worker' %}
         <a href="{% url 'worker_jobs' %}" class="hover:text-white">کارهای من</a>
         <a href="{% url 'worker_profile' %}" class="hover:text-white">پروفایل کاری</a>
@@ -18,7 +19,8 @@
       {% else %}
         <a href="{% url 'register' %}?role=worker" class="hover:text-white">ثبت‌نام سرویس دهندگان</a>
       {% endif %}
-      <a href="{% url 'faq' %}" class="hover:text-white">پرسش‌ها</a>
+      <a href="{% url 'faq' %}" class="hover:text-white {% if request.resolver_match.url_name == 'faq' %}text-wheat{% endif %}">پرسش‌ها</a>
+      <a href="{% url 'about' %}" class="hidden hover:text-white xl:inline {% if request.resolver_match.url_name == 'about' %}text-wheat{% endif %}">درباره ما</a>
     </nav>
     <div class="flex items-center gap-2">
       {% if request.user.is_authenticated %}
@@ -39,6 +41,7 @@
     <div class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 text-sm">
       <a class="rounded-md px-3 py-2 hover:bg-white/10" href="{% url 'home' %}">خانه</a>
       <a class="rounded-md px-3 py-2 hover:bg-white/10" href="{% url 'services' %}">خدمات</a>
+      <a class="rounded-md px-3 py-2 hover:bg-white/10" href="{% url 'workers' %}">سرویس‌دهندگان</a>
       {% if current_profile.role == 'worker' %}
         <a class="rounded-md px-3 py-2 hover:bg-white/10" href="{% url 'worker_jobs' %}">کارهای من</a>
         <a class="rounded-md px-3 py-2 hover:bg-white/10" href="{% url 'worker_profile' %}">پروفایل کاری</a>

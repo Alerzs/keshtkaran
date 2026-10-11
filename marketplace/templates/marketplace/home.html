@@ -10,6 +10,9 @@
       <h1 class="mt-3 text-5xl leading-tight text-ink sm:text-6xl">سرویس دهنده همان منطقه، برای کار همان زمین</h1>
       <p class="mt-4 max-w-xl text-base leading-8 text-muted">نوع خدمت و شهر زمین را مشخص کنید. فقط کسانی پیشنهاد می‌شوند که همان حوزه را کار می‌کنند و در همان شهر فعال‌اند.</p>
       <div class="mt-4 flex flex-wrap gap-2">
+        {% if not request.user.is_authenticated %}
+          <a href="{% url 'register' %}" class="inline-flex items-center gap-1.5 bg-clay px-3 py-1.5 text-sm font-semibold text-white hover:bg-clay-dark">ثبت‌نام</a>
+        {% endif %}
         <a href="{% url 'workers' %}" class="inline-flex items-center gap-1.5 border border-line bg-sheet px-3 py-1.5 text-sm font-semibold text-soil hover:border-clay hover:text-clay">سرویس‌دهندگان</a>
         <a href="{% url 'services' %}" class="inline-flex items-center gap-1.5 border border-line bg-sheet px-3 py-1.5 text-sm font-semibold text-soil hover:border-clay hover:text-clay">فهرست خدمات</a>
         <a href="{% url 'about' %}" class="inline-flex items-center gap-1.5 border border-line bg-sheet px-3 py-1.5 text-sm font-semibold text-soil hover:border-clay hover:text-clay">درباره ما</a>

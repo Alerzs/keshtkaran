@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;600;700&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/output.css' %}?v=10">
+  <link rel="stylesheet" href="{% static 'css/output.css' %}?v=12">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-paper pb-20 font-sans text-ink antialiased lg:pb-0">
@@ -39,8 +39,37 @@
   <script>
     const menuBtn = document.getElementById('menu-btn');
     const menu = document.getElementById('mobile-menu');
+    const accountBtn = document.getElementById('account-btn');
+    const accountPanel = document.getElementById('account-panel');
+
+    function setAccountOpen(open) {
+      if (!accountBtn || !accountPanel) return;
+      accountPanel.classList.toggle('hidden', !open);
+      accountBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
     if (menuBtn && menu) {
-      menuBtn.addEventListener('click', () => menu.classList.toggle('hidden'));
+      menuBtn.addEventListener('click', () => {
+        menu.classList.toggle('hidden');
+        setAccountOpen(false);
+      });
+    }
+    if (accountBtn && accountPanel) {
+      accountBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const open = accountBtn.getAttribute('aria-expanded') !== 'true';
+        setAccountOpen(open);
+        if (open && menu) menu.classList.add('hidden');
+      });
+      document.addEventListener('click', (event) => {
+        if (!accountPanel.contains(event.target) && event.target !== accountBtn) setAccountOpen(false);
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && accountBtn.getAttribute('aria-expanded') === 'true') {
+          setAccountOpen(false);
+          accountBtn.focus();
+        }
+      });
     }
   </script>
   {% block extra_js %}{% endblock %}

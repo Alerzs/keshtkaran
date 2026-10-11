@@ -25,9 +25,14 @@
         <span class="rounded-full px-3 py-1 text-xs font-bold {{ job.status_classes }}">{{ job.get_status_display }}</span>
       </div>
       {% include "marketplace/partials/stages.html" with stages=job.public_progress_stages %}
-      <p class="mt-3 text-sm leading-7">آدرس زمین: {{ job.address }}{% if job.land_area %} · {{ job.land_area|fa_digits }} هکتار{% endif %}</p>
-      {% if job.note %}<p class="text-sm text-slate-500">{{ job.note }}</p>{% endif %}
-      <p class="mt-2 text-sm">تماس با صاحب زمین: <a class="font-bold text-teal-700" dir="ltr" href="tel:{{ job.farmer.profile.phone }}">{{ job.farmer.profile.phone|fa_digits }}</a></p>
+      {% if job.admin_approved %}
+        <p class="mt-3 text-sm leading-7">آدرس زمین: {{ job.address }}{% if job.land_area %} · {{ job.land_area|fa_digits }} هکتار{% endif %}</p>
+        {% if job.note %}<p class="text-sm text-slate-500">{{ job.note }}</p>{% endif %}
+        <p class="mt-2 text-sm">تماس با صاحب زمین: <a class="font-bold text-teal-700" dir="ltr" href="tel:{{ job.farmer.profile.phone }}">{{ job.farmer.profile.phone|fa_digits }}</a></p>
+      {% endif %}
+      {% if job.rejection_reason %}
+        <p class="mt-3 rounded-2xl bg-rose-50 px-4 py-3 text-sm leading-7 text-rose-800">علت رد: {{ job.rejection_reason }}</p>
+      {% endif %}
       <div class="mt-4 flex flex-wrap gap-2">
         {% if job.status == 'pending' %}
           <form method="post" action="{% url 'job_update' job.pk %}">{% csrf_token %}<button name="action" value="confirm" class="rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white">پذیرش</button></form>

@@ -11,10 +11,12 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from .forms import (
-    BookForm, FarmerProfileForm, LoginForm, OrderRequestForm, RegisterForm, ReviewForm, WorkerSettingsForm,
+    AdminAccountForm, BookForm, FarmerProfileForm, LoginForm, OrderRequestForm, RegisterForm, ReviewForm,
+    WorkerSettingsForm,
 )
 from .geo import city_centers
 from .models import Booking, Category, City, Profile, Review, Service, User, WorkerProfile
+from .sms import SmsError, send_account_sms
 
 
 def role_required(role):
@@ -86,6 +88,9 @@ def order_service(request, slug):
             'ثبت درخواست فقط برای صاحبان زمین است. درخواست‌های رسیده را از کارهای من تأیید کنید.',
         )
         return redirect('worker_jobs')
+    if profile and profile.role == Profile.ADMIN:
+        messages.error(request, 'رزرو سرویس‌دهنده فقط برای صاحبان زمین است.')
+        return redirect('admin_panel')
     service = get_object_or_404(Service.objects.select_related('category'), slug=slug)
     initial = {}
     if profile and profile.role == Profile.FARMER:
@@ -235,14 +240,51 @@ def book(request, pk):
     return render(request, 'marketplace/book.html', {'worker': worker, 'form': form})
 
 
+def _farmer_stage_options():
+    return [
+        (Booking.PENDING, 'پذیرش سرویس دهنده', Q(status=Booking.PENDING)),
+        (Booking.CONFIRMED, 'اتمام کار', Q(status=Booking.CONFIRMED)),
+        ('feedback', 'ثبت نظر', Q(status=Booking.DONE, review__isnull=True)),
+        ('finished', 'تکمیل شده', Q(status=Booking.DONE, review__isnull=False)),
+        (Booking.REJECTED, 'رد شده', Q(status=Booking.REJECTED)),
+        (Booking.CANCELLED, 'لغو شده', Q(status=Booking.CANCELLED)),
+    ]
+
+
+def _bookings_url(request):
+    allowed = {value for value, _label, _query in _farmer_stage_options()}
+    stage = request.GET.get('stage', '')
+    if stage in allowed:
+        return f"{reverse('bookings')}?{urlencode({'stage': stage})}"
+    return reverse('bookings')
+
+
 @role_required(Profile.FARMER)
 def bookings(request):
-    items = (
+    options = _farmer_stage_options()
+    allowed = {value for value, _label, _query in options}
+    selected = request.GET.get('stage', '')
+    if selected not in allowed:
+        selected = ''
+    base = (
         request.user.bookings
         .select_related('service', 'city', 'worker__user__profile', 'review')
         .order_by('-created_at')
     )
-    return render(request, 'marketplace/bookings.html', {'bookings': items})
+    counts = base.aggregate(**{
+        value: Count('id', filter=query) for value, _label, query in options
+    })
+    items = base.filter(next(query for value, _label, query in options if value == selected)) if selected else base
+    filters = [{'value': '', 'label': 'همه', 'count': sum(counts.values())}]
+    filters.extend(
+        {'value': value, 'label': label, 'count': counts[value]}
+        for value, label, _query in options
+    )
+    return render(request, 'marketplace/bookings.html', {
+        'bookings': items,
+        'filters': filters,
+        'selected': selected,
+    })
 
 
 @require_POST
@@ -255,7 +297,7 @@ def booking_cancel(request, pk):
         messages.success(request, 'رزرو لغو شد.')
     else:
         messages.error(request, 'این رزرو دیگر قابل لغو نیست.')
-    return redirect('bookings')
+    return redirect(_bookings_url(request))
 
 
 @require_POST
@@ -271,7 +313,7 @@ def booking_complete(request, pk):
     booking.save(update_fields=['status'])
     WorkerProfile.objects.filter(pk=booking.worker_id).update(jobs_done=F('jobs_done') + 1)
     messages.success(request, 'اتمام کار ثبت شد. حالا می‌توانید نظر خود را بنویسید.')
-    return redirect('bookings')
+    return redirect(_bookings_url(request))
 
 
 @require_POST
@@ -280,7 +322,7 @@ def booking_review(request, pk):
     booking = get_object_or_404(Booking, pk=pk, farmer=request.user, status=Booking.DONE)
     if booking.existing_review:
         messages.error(request, 'برای این رزرو قبلاً نظر ثبت شده است.')
-        return redirect('bookings')
+        return redirect(_bookings_url(request))
     form = ReviewForm(request.POST)
     if form.is_valid():
         Review.objects.create(
@@ -294,7 +336,7 @@ def booking_review(request, pk):
         messages.success(request, 'نظر شما ثبت شد.')
     else:
         messages.error(request, 'امتیاز و متن نظر را کامل کنید.')
-    return redirect('bookings')
+    return redirect(_bookings_url(request))
 
 
 def _farmer_viewer(request, farmer):
@@ -395,6 +437,35 @@ def admin_panel(request):
     })
 
 
+@role_required(Profile.ADMIN)
+def admin_create_account(request):
+    form = AdminAccountForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        user = form.save()
+        password = form.cleaned_data['password']
+        try:
+            send_account_sms(user.username, password)
+        except SmsError as exc:
+            messages.warning(
+                request,
+                f'حساب {user.get_full_name()} ساخته شد، ولی پیامک ارسال نشد: {exc}',
+            )
+        else:
+            messages.success(
+                request,
+                f'حساب {user.get_full_name()} ساخته شد و نام کاربری و رمز عبور به {user.username} پیامک شد.',
+            )
+        return redirect('admin_panel')
+    return render(request, 'marketplace/admin_account.html', {
+        'form': form,
+        'categories': Category.objects.prefetch_related('services'),
+        'cities': City.objects.all(),
+        'selected_services': form.selected_pks('services'),
+        'selected_cities': form.selected_pks('cities'),
+        'city_centers': city_centers(),
+    })
+
+
 @require_POST
 @role_required(Profile.ADMIN)
 def admin_approve(request, pk):
@@ -402,8 +473,16 @@ def admin_approve(request, pk):
     booking.confirmed_by = request.user
     booking.confirmed_at = timezone.now()
     if request.POST.get('action') == 'reject':
+        reason = (request.POST.get('reason') or '').strip()
+        if not reason:
+            messages.error(request, 'برای رد درخواست، علت را بنویسید.')
+            return redirect('admin_panel')
+        if len(reason) > 500:
+            messages.error(request, 'علت رد را در ۵۰۰ نویسه بنویسید.')
+            return redirect('admin_panel')
         booking.status = Booking.REJECTED
-        booking.save(update_fields=['status', 'confirmed_by', 'confirmed_at'])
+        booking.rejection_reason = reason
+        booking.save(update_fields=['status', 'rejection_reason', 'confirmed_by', 'confirmed_at'])
         messages.success(request, 'صلاحیت درخواست رد شد.')
     else:
         booking.admin_approved = True
@@ -448,7 +527,7 @@ def worker_profile(request):
 def worker_jobs(request):
     worker = get_object_or_404(WorkerProfile, user=request.user)
     jobs = (
-        worker.jobs.filter(admin_approved=True)
+        worker.jobs.filter(Q(admin_approved=True) | ~Q(rejection_reason=''))
         .select_related('service', 'city', 'farmer__profile', 'review')
         .order_by('-created_at')
     )
@@ -497,6 +576,9 @@ def register(request):
 
 def login_view(request):
     if request.user.is_authenticated:
+        profile = getattr(request.user, 'profile', None)
+        if profile and profile.role == Profile.ADMIN:
+            return redirect('admin_panel')
         return redirect('home')
     form = LoginForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():

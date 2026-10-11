@@ -16,8 +16,14 @@ Copy `.env.example` to `.env` for local work. On the server, set these variables
 | `CSRF_TRUSTED_ORIGINS` | Empty | `https://your-app.example.com` |
 | `SECURE_SSL_REDIRECT` | `False` | `False` unless the platform does not already redirect HTTP to HTTPS |
 | `PORT` | Unused by `runserver` | Set by the platform. The Procfile binds Gunicorn to it |
+| `MELIPAYAMAK_USERNAME` | Empty | Username of the Melipayamak panel |
+| `MELIPAYAMAK_PASSWORD` | Empty | Password of the Melipayamak panel |
+| `MELIPAYAMAK_FROM` | Empty | Approved sender number, for example `5000...` |
+| `MELIPAYAMAK_KEY` | Empty | Console key from the account settings page. It is appended to the send URL |
 
 `DEBUG` defaults to `False` when the variable is missing, so a deploy without `.env` does not turn debug on. `SECRET_KEY` has no default. The process refuses to start until it is set.
+
+When an admin creates an account, the app sends that mobile the username and password through Melipayamak. If `MELIPAYAMAK_KEY` is set, the request goes to `https://console.melipayamak.com/api/send/simple/` with that key added at the end of the URL. Copy the key from the console account settings. Without a key, the app uses the panel username and password at `https://rest.payamak-panel.com/api/SendSMS/SendSMS`. The account is still saved if the settings are incomplete or the provider rejects the message. The admin sees the provider's reason, and neither the account password nor the console key is shown again on the site. Use an approved service line as `MELIPAYAMAK_FROM`. If the panel requires an allowed IP, add this server's public IP there.
 
 With `DEBUG=False`, the app trusts `X-Forwarded-Proto` from the platform proxy and marks the session and CSRF cookies as secure.
 

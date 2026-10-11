@@ -302,6 +302,7 @@ class Booking(models.Model):
     wage = models.PositiveIntegerField('دستمزد روزانه در زمان رزرو', default=0)
     status = models.CharField('وضعیت', max_length=12, choices=STATUS_CHOICES, default=PENDING)
     admin_approved = models.BooleanField('صلاحیت تأیید شده', default=False)
+    rejection_reason = models.TextField('علت رد', blank=True, default='')
     reported_at = models.DateTimeField('زمان اعلام انجام', null=True, blank=True)
     confirmed_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL,

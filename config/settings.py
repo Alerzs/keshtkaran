@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / '.env', override=True)
 
 
 def env_bool(name, default=False):
@@ -141,6 +141,15 @@ if not DEBUG:
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
+
+def env_text(name):
+    return os.environ.get(name, '').strip().strip("'\"")
+
+
+MELIPAYAMAK_USERNAME = env_text('MELIPAYAMAK_USERNAME')
+MELIPAYAMAK_PASSWORD = env_text('MELIPAYAMAK_PASSWORD')
+MELIPAYAMAK_FROM = env_text('MELIPAYAMAK_FROM')
+MELIPAYAMAK_KEY = env_text('MELIPAYAMAK_KEY')
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -111,6 +111,11 @@
     box-shadow: inset 0 -2px 0 #c4a574;
   }
 
+  #account-btn[aria-expanded="true"] {
+    background-color: rgb(255 255 255 / 0.16);
+    border-color: rgb(196 165 116 / 0.75);
+  }
+
   nav.fixed.bottom-0 {
     box-shadow: 0 -10px 24px -18px rgb(36 28 20 / 0.4);
   }

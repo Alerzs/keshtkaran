@@ -1,8 +1,10 @@
 import re
+from decimal import Decimal
 
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.db import transaction
 from django.utils import timezone
 
 from .models import Booking, City, Profile, Service, WorkerProfile
@@ -63,6 +65,154 @@ class RegisterForm(forms.Form):
         Profile.objects.create(user=user, role=data['role'], phone=data['phone'])
         if data['role'] == Profile.WORKER:
             WorkerProfile.objects.create(user=user)
+        return user
+
+
+class AdminAccountForm(forms.Form):
+    role = forms.ChoiceField(
+        label='نقش',
+        choices=[item for item in Profile.ROLE_CHOICES if item[0] != Profile.ADMIN],
+        initial=Profile.FARMER,
+    )
+    name = forms.CharField(label='نام', max_length=150)
+    username = forms.CharField(label='نام کاربری', max_length=20)
+    password = forms.CharField(label='رمز عبور', widget=forms.PasswordInput)
+    password2 = forms.CharField(label='تکرار رمز عبور', required=False, widget=forms.PasswordInput)
+    bio = forms.CharField(
+        label='درباره تجربه کاری', required=False, widget=forms.Textarea(attrs={'rows': 4}),
+    )
+    experience_years = forms.IntegerField(label='سابقه کار (سال)', required=False, min_value=0, max_value=60)
+    daily_wage = forms.IntegerField(label='دستمزد روزانه (تومان)', required=False, min_value=0)
+    is_active = forms.BooleanField(label='آماده دریافت کار هستم', required=False, initial=True)
+    farm_city = forms.ModelChoiceField(
+        label='شهر زمین', queryset=City.objects.all(), required=False, empty_label='شهر زمین را انتخاب کنید',
+    )
+    farm_address = forms.CharField(
+        label='آدرس دقیق زمین', required=False, max_length=255, widget=forms.Textarea(attrs={'rows': 3}),
+    )
+    farm_latitude = forms.DecimalField(
+        label='عرض جغرافیایی', required=False, max_digits=9, decimal_places=6, widget=forms.HiddenInput,
+    )
+    farm_longitude = forms.DecimalField(
+        label='طول جغرافیایی', required=False, max_digits=9, decimal_places=6, widget=forms.HiddenInput,
+    )
+
+    worker_fields = ('bio', 'experience_years', 'daily_wage', 'is_active')
+    farmer_fields = ('farm_city', 'farm_address', 'farm_latitude', 'farm_longitude')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if name in {'role', 'is_active', 'farm_latitude', 'farm_longitude'}:
+                continue
+            field.widget.attrs['class'] = INPUT_CLASS
+        self.fields['username'].widget.attrs.update({
+            'dir': 'ltr', 'inputmode': 'numeric', 'placeholder': '0912...',
+        })
+        self.fields['bio'].widget.attrs['class'] += ' min-h-32 resize-y'
+        self.fields['farm_address'].widget.attrs['class'] += ' min-h-28 resize-y'
+        self.fields['farm_address'].widget.attrs['placeholder'] = 'روستا، جاده، نام قطعه یا نشانه محلی'
+        self.fields['experience_years'].widget.attrs.update({'dir': 'ltr', 'min': '0', 'max': '60'})
+        self.fields['daily_wage'].widget.attrs.update({'dir': 'ltr', 'min': '0'})
+        self.fields['is_active'].widget.attrs['class'] = 'h-5 w-5 accent-teal-600'
+
+    def clean_name(self):
+        name = self.cleaned_data['name'].strip()
+        if not name:
+            raise forms.ValidationError('نام را وارد کنید.')
+        return name
+
+    def clean_username(self):
+        phone = normalize_phone(self.cleaned_data['username'])
+        if not re.fullmatch(r'09\d{9}', phone):
+            raise forms.ValidationError('نام کاربری همان شماره موبایل است و باید با ۰۹ و ۱۱ رقم وارد شود.')
+        if get_user_model().objects.filter(username=phone).exists():
+            raise forms.ValidationError('این نام کاربری قبلاً ثبت شده است.')
+        return phone
+
+    def selected_pks(self, key):
+        if not self.is_bound:
+            return set()
+        return {int(item) for item in self.data.getlist(key) if str(item).isdigit()}
+
+    def clean(self):
+        cleaned = super().clean()
+        password = cleaned.get('password')
+        if password:
+            validate_password(password)
+        if password and cleaned.get('password2') and password != cleaned.get('password2'):
+            self.add_error('password2', 'تکرار رمز عبور یکسان نیست.')
+        role = cleaned.get('role')
+        if role == Profile.WORKER:
+            for name in self.farmer_fields:
+                self.errors.pop(name, None)
+            self._clean_worker(cleaned)
+        elif role == Profile.FARMER:
+            for name in self.worker_fields:
+                self.errors.pop(name, None)
+            self._clean_farmer(cleaned)
+        return cleaned
+
+    def _clean_worker(self, cleaned):
+        cleaned['bio'] = (cleaned.get('bio') or '').strip()
+        service_ids = self.selected_pks('services')
+        city_ids = self.selected_pks('cities')
+        services = list(Service.objects.filter(pk__in=service_ids))
+        cities = list(City.objects.filter(pk__in=city_ids))
+        if len(services) != len(service_ids):
+            self.add_error(None, 'حوزه کاری انتخاب‌شده معتبر نیست.')
+        if len(cities) != len(city_ids):
+            self.add_error(None, 'شهر محل کار انتخاب‌شده معتبر نیست.')
+        cleaned['services'] = services
+        cleaned['cities'] = cities
+        if cleaned.get('experience_years') is None:
+            cleaned['experience_years'] = 0
+        if cleaned.get('daily_wage') is None:
+            cleaned['daily_wage'] = 0
+
+    def _clean_farmer(self, cleaned):
+        cleaned['farm_address'] = (cleaned.get('farm_address') or '').strip()
+        lat = cleaned.get('farm_latitude')
+        lng = cleaned.get('farm_longitude')
+        if lat is None and lng is None:
+            return
+        if lat is None or lng is None:
+            self.add_error(None, 'برای ثبت موقعیت روی نقشه، عرض و طول جغرافیایی را با هم مشخص کنید.')
+            return
+        if lat < Decimal('24') or lat > Decimal('40'):
+            self.add_error('farm_latitude', 'عرض جغرافیایی باید داخل محدوده ایران باشد.')
+        if lng < Decimal('44') or lng > Decimal('64'):
+            self.add_error('farm_longitude', 'طول جغرافیایی باید داخل محدوده ایران باشد.')
+
+    @transaction.atomic
+    def save(self):
+        data = self.cleaned_data
+        name = data['name']
+        parts = name.split()
+        user = get_user_model().objects.create_user(
+            username=data['username'],
+            password=data['password'],
+            first_name=parts[0],
+            last_name=' '.join(parts[1:]),
+            name=name,
+        )
+        profile = Profile.objects.create(user=user, role=data['role'], phone=data['username'])
+        if data['role'] == Profile.WORKER:
+            worker = WorkerProfile.objects.create(
+                user=user,
+                bio=data['bio'],
+                experience_years=data['experience_years'],
+                daily_wage=data['daily_wage'],
+                is_active=bool(data.get('is_active')),
+            )
+            worker.services.set(data['services'])
+            worker.cities.set(data['cities'])
+        else:
+            profile.farm_city = data['farm_city']
+            profile.farm_address = data['farm_address']
+            profile.farm_latitude = data.get('farm_latitude')
+            profile.farm_longitude = data.get('farm_longitude')
+            profile.save()
         return user
 
 

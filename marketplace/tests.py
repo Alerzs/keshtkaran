@@ -560,6 +560,7 @@ class MarketplaceFlowTests(TestCase):
         guest = self.client.get(reverse('home'))
         self.assertContains(guest, '>خانه</a>')
         self.assertContains(guest, '>خدمات</a>')
+        self.assertNotContains(guest, '?role=worker" class="hover:text-white">ثبت‌نام سرویس دهندگان</a>')
         self.client.login(username='09124444444', password='demo1234')
         hidden = (
             '>خانه</a>',
@@ -599,6 +600,16 @@ class MarketplaceFlowTests(TestCase):
         unknown = self.client.get(reverse('admin_people'), {'role': 'admin'})
         self.assertContains(unknown, 'سامان کریمی')
         self.assertNotContains(unknown, 'رضا محمدی')
+
+    def test_password_fields_include_a_visibility_toggle(self):
+        login = self.client.get(reverse('login'))
+        self.assertContains(login, 'class="password-field"', count=1)
+        self.assertContains(login, 'aria-label="نمایش رمز"', count=1)
+        register = self.client.get(reverse('register'))
+        self.assertContains(register, 'aria-label="نمایش رمز"', count=2)
+        self.client.login(username='09124444444', password='demo1234')
+        account = self.client.get(reverse('admin_create_account'))
+        self.assertContains(account, 'aria-label="نمایش رمز"', count=2)
 
     def test_admin_people_search_by_name_and_phone(self):
         self.client.login(username='09124444444', password='demo1234')

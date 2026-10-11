@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from django.utils import timezone
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from .models import Booking, City, Profile, Service, WorkerProfile
 from .utils import normalize_phone
@@ -15,13 +17,35 @@ INPUT_CLASS = (
     'transition focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-100'
 )
 
+_PASSWORD_TOGGLE = mark_safe(
+    '<button type="button" class="password-toggle" aria-label="نمایش رمز" aria-pressed="false">'
+    '<svg class="eye-open h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'
+    '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'
+    '</svg>'
+    '<svg class="eye-off hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'
+    '<path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 002.8 2.8"/>'
+    '<path d="M9.9 5.1A10.8 10.8 0 0112 5c6.5 0 10 7 10 7a18.5 18.5 0 01-3.2 4.2"/>'
+    '<path d="M6.1 6.1C3.8 7.8 2 12 2 12s3.5 7 10 7a10.8 10.8 0 004.1-.8"/>'
+    '</svg>'
+    '</button>'
+)
+
+
+class PasswordToggleInput(forms.PasswordInput):
+    def render(self, name, value, attrs=None, renderer=None):
+        return format_html(
+            '<div class="password-field">{}{}</div>',
+            super().render(name, value, attrs, renderer),
+            _PASSWORD_TOGGLE,
+        )
+
 
 class RegisterForm(forms.Form):
     first_name = forms.CharField(label='نام', max_length=50)
     last_name = forms.CharField(label='نام خانوادگی', max_length=50)
     phone = forms.CharField(label='شماره موبایل', max_length=20)
-    password = forms.CharField(label='رمز عبور', widget=forms.PasswordInput)
-    password2 = forms.CharField(label='تکرار رمز عبور', widget=forms.PasswordInput)
+    password = forms.CharField(label='رمز عبور', widget=PasswordToggleInput)
+    password2 = forms.CharField(label='تکرار رمز عبور', widget=PasswordToggleInput)
     role = forms.ChoiceField(
         label='نقش',
         choices=[item for item in Profile.ROLE_CHOICES if item[0] != Profile.ADMIN],
@@ -76,8 +100,8 @@ class AdminAccountForm(forms.Form):
     )
     name = forms.CharField(label='نام', max_length=150)
     username = forms.CharField(label='نام کاربری', max_length=20)
-    password = forms.CharField(label='رمز عبور', widget=forms.PasswordInput)
-    password2 = forms.CharField(label='تکرار رمز عبور', required=False, widget=forms.PasswordInput)
+    password = forms.CharField(label='رمز عبور', widget=PasswordToggleInput)
+    password2 = forms.CharField(label='تکرار رمز عبور', required=False, widget=PasswordToggleInput)
     bio = forms.CharField(
         label='درباره تجربه کاری', required=False, widget=forms.Textarea(attrs={'rows': 4}),
     )
@@ -218,7 +242,7 @@ class AdminAccountForm(forms.Form):
 
 class LoginForm(forms.Form):
     phone = forms.CharField(label='شماره موبایل')
-    password = forms.CharField(label='رمز عبور', widget=forms.PasswordInput)
+    password = forms.CharField(label='رمز عبور', widget=PasswordToggleInput)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

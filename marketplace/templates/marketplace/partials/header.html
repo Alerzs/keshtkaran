@@ -21,8 +21,6 @@
         <a href="{% url 'admin_panel' %}" class="hover:text-white {% if request.resolver_match.url_name == 'admin_panel' or request.resolver_match.url_name == 'admin_approve' %}text-wheat{% endif %}">پنل کارها</a>
         <a href="{% url 'admin_people' %}" class="hover:text-white {% if request.resolver_match.url_name == 'admin_people' %}text-wheat{% endif %}">افراد</a>
         <a href="{% url 'admin_create_account' %}" class="hover:text-white {% if request.resolver_match.url_name == 'admin_create_account' %}text-wheat{% endif %}">افزودن حساب</a>
-      {% else %}
-        <a href="{% url 'register' %}?role=worker" class="hover:text-white">ثبت‌نام سرویس دهندگان</a>
       {% endif %}
       {% if current_profile.role != 'admin' %}
       <a href="{% url 'faq' %}" class="hover:text-white {% if request.resolver_match.url_name == 'faq' %}text-wheat{% endif %}">پرسش‌ها</a>

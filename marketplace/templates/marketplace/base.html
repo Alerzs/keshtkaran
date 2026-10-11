@@ -10,6 +10,26 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;600;700&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/output.css' %}?v=12">
+  <style>
+    .password-field { position: relative; }
+    .password-field > input { padding-left: 2.75rem; }
+    .password-toggle {
+      position: absolute;
+      top: 50%;
+      left: 0.55rem;
+      z-index: 1;
+      display: grid;
+      width: 2rem;
+      height: 2rem;
+      place-items: center;
+      color: #64748b;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      transform: translateY(-50%);
+    }
+    .password-toggle:hover { color: #0f766e; }
+  </style>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-paper pb-20 font-sans text-ink antialiased lg:pb-0">
@@ -71,6 +91,20 @@
         }
       });
     }
+
+    document.querySelectorAll('.password-toggle').forEach((button) => {
+      const input = button.parentElement.querySelector('input');
+      const openIcon = button.querySelector('.eye-open');
+      const closedIcon = button.querySelector('.eye-off');
+      button.addEventListener('click', () => {
+        const showing = input.type === 'password';
+        input.type = showing ? 'text' : 'password';
+        button.setAttribute('aria-pressed', showing ? 'true' : 'false');
+        button.setAttribute('aria-label', showing ? 'پنهان کردن رمز' : 'نمایش رمز');
+        openIcon.classList.toggle('hidden', showing);
+        closedIcon.classList.toggle('hidden', !showing);
+      });
+    });
   </script>
   {% block extra_js %}{% endblock %}
 </body>

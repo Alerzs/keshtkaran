@@ -437,6 +437,54 @@ def admin_panel(request):
     })
 
 
+_PEOPLE_DIGIT_TRANS = str.maketrans('۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', '01234567890123456789')
+
+
+def _filter_people(queryset, query, phone_field):
+    query = (query or '').strip()
+    if not query:
+        return queryset
+    normalized = query.translate(_PEOPLE_DIGIT_TRANS)
+    matched = (
+        Q(user__name__icontains=query)
+        | Q(user__first_name__icontains=query)
+        | Q(user__last_name__icontains=query)
+    )
+    for term in {query, normalized}:
+        matched |= Q(**{f'{phone_field}__icontains': term}) | Q(user__username__icontains=term)
+    return queryset.filter(matched).distinct()
+
+
+@role_required(Profile.ADMIN)
+def admin_people(request):
+    selected = request.GET.get('role', Profile.FARMER)
+    if selected not in {Profile.FARMER, Profile.WORKER}:
+        selected = Profile.FARMER
+    query = request.GET.get('q', '').strip()
+    farmers = _filter_people(
+        Profile.objects.filter(role=Profile.FARMER)
+        .select_related('user', 'farm_city')
+        .order_by('user__name', 'user__username'),
+        query,
+        'phone',
+    )
+    workers = _filter_people(
+        WorkerProfile.objects.select_related('user__profile')
+        .prefetch_related('services', 'cities')
+        .order_by('user__name', 'user__username'),
+        query,
+        'user__profile__phone',
+    )
+    return render(request, 'marketplace/admin_people.html', {
+        'selected': selected,
+        'query': query,
+        'farmers': farmers,
+        'workers': workers,
+        'farmer_count': farmers.count(),
+        'worker_count': workers.count(),
+    })
+
+
 @role_required(Profile.ADMIN)
 def admin_create_account(request):
     form = AdminAccountForm(request.POST or None)

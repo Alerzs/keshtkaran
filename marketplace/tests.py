@@ -571,13 +571,56 @@ class MarketplaceFlowTests(TestCase):
             '>همه خدمات</a>',
             '>ثبت‌نام سرویس دهندگان</a>',
         )
-        for name in ('admin_panel', 'admin_create_account'):
+        for name in ('admin_panel', 'admin_create_account', 'admin_people'):
             page = self.client.get(reverse(name))
             self.assertContains(page, '>پنل کارها</a>')
+            self.assertContains(page, '>افراد</a>')
             self.assertContains(page, '>افزودن حساب</a>')
             for label in hidden:
                 self.assertNotContains(page, label)
         self.assertRedirects(self.client.get(reverse('login')), reverse('admin_panel'))
+
+    def test_admin_can_list_farmers_and_workers(self):
+        guest = self.client.get(reverse('admin_people'))
+        self.assertIn('/login/', guest['Location'])
+        self.client.login(username='09121111111', password='demo1234')
+        self.assertRedirects(self.client.get(reverse('admin_people')), reverse('home'))
+        self.client.logout()
+
+        self.client.login(username='09124444444', password='demo1234')
+        farmers = self.client.get(reverse('admin_people'))
+        self.assertContains(farmers, 'سامان کریمی')
+        self.assertContains(farmers, 'صاحبان زمین')
+        self.assertNotContains(farmers, 'رضا محمدی')
+        workers = self.client.get(reverse('admin_people'), {'role': 'worker'})
+        self.assertContains(workers, 'رضا محمدی')
+        self.assertContains(workers, 'سرویس‌دهندگان')
+        self.assertNotContains(workers, 'سامان کریمی')
+        unknown = self.client.get(reverse('admin_people'), {'role': 'admin'})
+        self.assertContains(unknown, 'سامان کریمی')
+        self.assertNotContains(unknown, 'رضا محمدی')
+
+    def test_admin_people_search_by_name_and_phone(self):
+        self.client.login(username='09124444444', password='demo1234')
+        by_name = self.client.get(reverse('admin_people'), {'q': 'سامان'})
+        self.assertContains(by_name, 'سامان کریمی')
+        self.assertNotContains(by_name, 'حسین یوسفی')
+        self.assertContains(by_name, 'صاحبان زمین (۱)')
+        by_phone = self.client.get(reverse('admin_people'), {'q': '09121111111'})
+        self.assertContains(by_phone, 'سامان کریمی')
+        self.assertNotContains(by_phone, 'حسین یوسفی')
+        persian_digits = self.client.get(reverse('admin_people'), {'q': '۱۱۱۱۱'})
+        self.assertContains(persian_digits, 'سامان کریمی')
+        self.assertNotContains(persian_digits, 'حسین یوسفی')
+        worker_name = self.client.get(reverse('admin_people'), {'role': 'worker', 'q': 'رضا'})
+        self.assertContains(worker_name, 'رضا محمدی')
+        self.assertNotContains(worker_name, 'حسن موسوی')
+        worker_phone = self.client.get(reverse('admin_people'), {'role': 'worker', 'q': '09130000001'})
+        self.assertContains(worker_phone, 'رضا محمدی')
+        self.assertNotContains(worker_phone, 'حسن موسوی')
+        missing = self.client.get(reverse('admin_people'), {'q': 'ناموجود'})
+        self.assertContains(missing, 'کسی با این نام یا شماره پیدا نشد.')
+        self.assertNotContains(missing, 'سامان کریمی')
 
     @override_settings(
         MELIPAYAMAK_USERNAME='panel-user',

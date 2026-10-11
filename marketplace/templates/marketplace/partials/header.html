@@ -19,6 +19,7 @@
         <a href="{% url 'farmer_profile' %}" class="hover:text-white {% if request.resolver_match.url_name == 'farmer_profile' %}text-wheat{% endif %}">پروفایل زمین</a>
       {% elif current_profile.role == 'admin' %}
         <a href="{% url 'admin_panel' %}" class="hover:text-white {% if request.resolver_match.url_name == 'admin_panel' or request.resolver_match.url_name == 'admin_approve' %}text-wheat{% endif %}">پنل کارها</a>
+        <a href="{% url 'admin_people' %}" class="hover:text-white {% if request.resolver_match.url_name == 'admin_people' %}text-wheat{% endif %}">افراد</a>
         <a href="{% url 'admin_create_account' %}" class="hover:text-white {% if request.resolver_match.url_name == 'admin_create_account' %}text-wheat{% endif %}">افزودن حساب</a>
       {% else %}
         <a href="{% url 'register' %}?role=worker" class="hover:text-white">ثبت‌نام سرویس دهندگان</a>
@@ -61,6 +62,7 @@
                 <a class="block px-4 py-2.5 hover:bg-paper {% if request.resolver_match.url_name == 'bookings' or request.resolver_match.url_name == 'booking_cancel' or request.resolver_match.url_name == 'booking_complete' or request.resolver_match.url_name == 'booking_review' %}bg-paper font-semibold text-clay{% endif %}" href="{% url 'bookings' %}">سفارش‌های من</a>
               {% elif current_profile.role == 'admin' %}
                 <a class="block px-4 py-2.5 hover:bg-paper {% if request.resolver_match.url_name == 'admin_panel' or request.resolver_match.url_name == 'admin_approve' %}bg-paper font-semibold text-clay{% endif %}" href="{% url 'admin_panel' %}">پنل کارها</a>
+                <a class="block px-4 py-2.5 hover:bg-paper {% if request.resolver_match.url_name == 'admin_people' %}bg-paper font-semibold text-clay{% endif %}" href="{% url 'admin_people' %}">افراد</a>
                 <a class="block px-4 py-2.5 hover:bg-paper {% if request.resolver_match.url_name == 'admin_create_account' %}bg-paper font-semibold text-clay{% endif %}" href="{% url 'admin_create_account' %}">افزودن حساب</a>
               {% endif %}
             </div>
@@ -103,6 +105,7 @@
         <a class="rounded-md px-3 py-2 hover:bg-white/10 {% if request.resolver_match.url_name == 'farmer_profile' %}bg-white/10 text-wheat{% endif %}" href="{% url 'farmer_profile' %}">پروفایل زمین</a>
       {% elif current_profile.role == 'admin' %}
         <a class="rounded-md px-3 py-2 hover:bg-white/10 {% if request.resolver_match.url_name == 'admin_panel' or request.resolver_match.url_name == 'admin_approve' %}bg-white/10 text-wheat{% endif %}" href="{% url 'admin_panel' %}">پنل کارها</a>
+        <a class="rounded-md px-3 py-2 hover:bg-white/10 {% if request.resolver_match.url_name == 'admin_people' %}bg-white/10 text-wheat{% endif %}" href="{% url 'admin_people' %}">افراد</a>
         <a class="rounded-md px-3 py-2 hover:bg-white/10 {% if request.resolver_match.url_name == 'admin_create_account' %}bg-white/10 text-wheat{% endif %}" href="{% url 'admin_create_account' %}">افزودن حساب</a>
       {% else %}
         <a class="rounded-md px-3 py-2 hover:bg-white/10 {% if request.resolver_match.url_name == 'register' %}bg-white/10 text-wheat{% endif %}" href="{% url 'register' %}">ثبت‌نام</a>

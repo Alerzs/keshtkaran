@@ -9,6 +9,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from .dates import to_jalali
+from .geo import OUTSIDE_IRAN, in_iran
+
 
 class User(AbstractUser):
     name = models.CharField('نام', max_length=150, blank=True)
@@ -155,14 +158,16 @@ class Profile(models.Model):
             return
         if lat is None or lng is None:
             raise ValidationError('برای ثبت موقعیت روی نقشه، عرض و طول جغرافیایی را با هم مشخص کنید.')
-        if lat < Decimal('24') or lat > Decimal('40'):
-            raise ValidationError({'farm_latitude': 'عرض جغرافیایی باید داخل محدوده ایران باشد.'})
-        if lng < Decimal('44') or lng > Decimal('64'):
-            raise ValidationError({'farm_longitude': 'طول جغرافیایی باید داخل محدوده ایران باشد.'})
+        if not in_iran(lat, lng):
+            raise ValidationError({'farm_latitude': OUTSIDE_IRAN})
 
     @property
     def has_farm_location(self):
         return self.farm_latitude is not None and self.farm_longitude is not None
+
+    @property
+    def has_saved_farm(self):
+        return bool(self.farm_city_id) and len((self.farm_address or '').strip()) >= 8
 
     @property
     def initials(self):
@@ -317,7 +322,7 @@ class Booking(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.service} — {self.work_date}'
+        return f'{self.service} — {to_jalali(self.work_date)}'
 
     def _build_stages(self, labels, current):
         failed = self.status in (self.REJECTED, self.CANCELLED)

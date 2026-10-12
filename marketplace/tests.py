@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from pathlib import Path
 
 from unittest.mock import patch
 
@@ -45,6 +46,58 @@ class MarketplaceFlowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn('/workers/', response['Location'])
         self.assertIn('service=spraying', response['Location'])
+
+    def test_saved_farm_city_and_address_stay_fixed_on_a_request(self):
+        from urllib.parse import unquote_plus
+
+        self.client.login(username='09121111111', password='demo1234')
+        editable = self.client.get(reverse('order', args=['wheat-harvest']))
+        self.assertFalse(editable.context['form'].fields['city'].disabled)
+        self.assertNotContains(editable, 'عوض نمی‌شود')
+
+        mashhad = City.objects.get(name='مشهد')
+        shiraz = City.objects.get(name='شیراز')
+        profile = User.objects.get(username='09121111111').profile
+        profile.farm_city = mashhad
+        profile.farm_address = 'جاده کلات، کیلومتر ۱۲، قطعه نمونه'
+        profile.save()
+        order = self.client.get(reverse('order', args=['wheat-harvest']))
+        self.assertTrue(order.context['form'].fields['city'].disabled)
+        self.assertTrue(order.context['form'].fields['address'].disabled)
+        self.assertContains(order, 'جاده کلات، کیلومتر ۱۲، قطعه نمونه')
+        self.assertContains(order, 'عوض نمی‌شود')
+        posted = self.client.post(reverse('order', args=['wheat-harvest']), {
+            'city': shiraz.pk,
+            'address': 'آدرس جعلی در شیراز برای دور زدن',
+            'work_date': (timezone.localdate() + timedelta(days=2)).isoformat(),
+        })
+        location = unquote_plus(posted['Location'])
+        self.assertIn(f'city={mashhad.pk}', location)
+        self.assertNotIn(f'city={shiraz.pk}', location)
+        self.assertIn(profile.farm_address, location)
+
+        listing = self.client.get(reverse('workers'), {
+            'service': 'wheat-harvest',
+            'city': shiraz.pk,
+            'address': 'آدرس جعلی در شیراز برای دور زدن',
+        })
+        self.assertContains(listing, 'disabled')
+        self.assertContains(listing, 'مشهد')
+        self.assertContains(listing, profile.farm_address)
+        self.assertNotContains(listing, 'حسین کریمی')
+
+        worker = User.objects.get(username='09130000001').worker
+        service = Service.objects.get(slug='wheat-harvest')
+        booked = self.client.post(reverse('book', args=[worker.pk]), {
+            'service': service.pk,
+            'city': shiraz.pk,
+            'address': 'آدرس جعلی در شیراز برای دور زدن',
+            'work_date': (timezone.localdate() + timedelta(days=3)).isoformat(),
+        })
+        self.assertRedirects(booked, reverse('bookings'))
+        booking = Booking.objects.get()
+        self.assertEqual(booking.city, mashhad)
+        self.assertEqual(booking.address, profile.farm_address)
 
     def test_farmer_can_book_matching_worker(self):
         self.client.login(username='09121111111', password='demo1234')
@@ -301,25 +354,114 @@ class MarketplaceFlowTests(TestCase):
         page = self.client.get(reverse('farmer_profile'))
         self.assertContains(page, 'id="farm-map"')
         self.assertContains(page, '36.297200')
+        self.assertContains(page, 'farm-map.js?v=3')
+        script = (Path(__file__).resolve().parents[1] / 'static' / 'js' / 'farm-map.js').read_text(encoding='utf-8')
+        self.assertLess(script.index('map.setView(start, zoom)'), script.index('if (hasPin && inIran'))
 
     def test_farmer_map_location_must_stay_inside_iran(self):
+        from marketplace.geo import in_iran
+
+        self.assertTrue(in_iran('25.291900', '60.643000'))
+        self.assertTrue(in_iran('27.220000', '56.280000'))
+        self.assertTrue(in_iran('26.532000', '53.980000'))
+        self.assertTrue(in_iran('28.923400', '50.820300'))
+        self.assertFalse(in_iran('33.315200', '44.366100'))
+        self.assertFalse(in_iran('29.375900', '47.977400'))
+        self.assertFalse(in_iran('25.204800', '55.270800'))
+        self.assertFalse(in_iran('34.352900', '62.204000'))
+        self.assertFalse(in_iran('37.960100', '58.326100'))
+
         self.client.login(username='09121111111', password='demo1234')
         city = City.objects.get(name='مشهد')
-        response = self.client.post(reverse('farmer_profile'), {
+        outside = self.client.post(reverse('farmer_profile'), {
             'farm_city': city.pk,
             'farm_address': 'جاده کلات، کیلومتر ۱۲، قطعه نمونه',
-            'farm_latitude': '48.800000',
-            'farm_longitude': '2.300000',
+            'farm_latitude': '33.315200',
+            'farm_longitude': '44.366100',
         })
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(outside.status_code, 200)
+        self.assertContains(outside, 'خارج از مرزهای ایران')
         profile = User.objects.get(username='09121111111').profile
         self.assertFalse(profile.has_farm_location)
+        coast = self.client.post(reverse('farmer_profile'), {
+            'farm_city': city.pk,
+            'farm_address': 'جاده کلات، کیلومتر ۱۲، قطعه نمونه',
+            'farm_latitude': '25.291900',
+            'farm_longitude': '60.643000',
+        })
+        self.assertRedirects(coast, reverse('home'))
+        profile.refresh_from_db()
+        self.assertEqual(profile.farm_latitude, Decimal('25.291900'))
+        page = self.client.get(reverse('farmer_profile'))
+        self.assertContains(page, 'id="iran-border"')
+        self.assertContains(page, 'sm:h-[28rem]')
+        self.assertContains(page, 'farm-map.js')
 
     def test_order_page_shows_order_steps(self):
         response = self.client.get(reverse('order', args=['wheat-harvest']))
         self.assertContains(response, 'مراحل ثبت سفارش')
         self.assertContains(response, 'خدمت و آدرس')
         self.assertContains(response, 'aria-current="step"')
+
+    def test_dates_are_entered_and_shown_in_jalali(self):
+        import jdatetime
+
+        from marketplace.dates import jalali_parts, to_jalali
+
+        order = self.client.get(reverse('order', args=['wheat-harvest']))
+        self.assertContains(order, 'فروردین')
+        self.assertContains(order, 'name="work_date_0"')
+        self.assertNotContains(order, 'type="date"')
+
+        work_date = timezone.localdate() + timedelta(days=2)
+        year, month, day = jalali_parts(work_date)
+        self.client.login(username='09121111111', password='demo1234')
+        city = City.objects.get(name='مشهد')
+        profile = User.objects.get(username='09121111111').profile
+        profile.farm_city = city
+        profile.farm_address = 'جاده کلات، کیلومتر ۱۲، قطعه نمونه'
+        profile.save()
+        service = Service.objects.get(slug='wheat-harvest')
+        worker = User.objects.get(username='09130000001').worker
+        booked = self.client.post(reverse('book', args=[worker.pk]), {
+            'service': service.pk,
+            'city': city.pk,
+            'address': profile.farm_address,
+            'work_date_0': year,
+            'work_date_1': month,
+            'work_date_2': day,
+        })
+        self.assertRedirects(booked, reverse('bookings'))
+        booking = Booking.objects.get()
+        self.assertEqual(booking.work_date, work_date)
+        shown = to_jalali(work_date)
+        self.assertContains(self.client.get(reverse('bookings')), shown)
+        listing = self.client.get(reverse('workers'), {'date': work_date.isoformat(), 'address': profile.farm_address})
+        self.assertContains(listing, shown)
+        self.assertContains(listing, f'value="{work_date.isoformat()}"')
+
+        invalid = self.client.post(reverse('book', args=[worker.pk]), {
+            'service': service.pk,
+            'city': city.pk,
+            'address': profile.farm_address,
+            'work_date_0': str(jdatetime.date.fromgregorian(date=work_date).year),
+            'work_date_1': '7',
+            'work_date_2': '31',
+        })
+        self.assertEqual(invalid.status_code, 200)
+        self.assertContains(invalid, 'تاریخ جلالی معتبر نیست')
+
+        admin = User.objects.get(username='09124444444')
+        booking.admin_approved = True
+        booking.confirmed_by = admin
+        booking.confirmed_at = timezone.now()
+        booking.save()
+        self.client.login(username='09124444444', password='demo1234')
+        panel = self.client.get(reverse('admin_panel'))
+        self.assertContains(panel, shown)
+        self.assertContains(panel, to_jalali(booking.confirmed_at, 'Y/m/d H:i'))
+        self.client.login(username='09130000001', password='demo1234')
+        self.assertContains(self.client.get(reverse('worker_jobs')), shown)
 
     def test_clicking_a_person_opens_their_profile(self):
         farmer = User.objects.get(username='09121111111')
@@ -632,6 +774,79 @@ class MarketplaceFlowTests(TestCase):
         missing = self.client.get(reverse('admin_people'), {'q': 'ناموجود'})
         self.assertContains(missing, 'کسی با این نام یا شماره پیدا نشد.')
         self.assertNotContains(missing, 'سامان کریمی')
+
+    def test_admin_lists_are_paginated(self):
+        self.client.login(username='09124444444', password='demo1234')
+        farmers = [
+            'احمد توکلی', 'باغ سیب مهربان', 'باغستان نمونه', 'تعاونی دشت طلا',
+            'حسین یوسفی', 'رضا کیانی', 'سامان کریمی', 'فاطمه نادری',
+            'مریم صالحی', 'مزرعه سبزدشت', 'مزرعه شمال',
+        ]
+        workers = [
+            'ابراهیم صالحی', 'امیر قاسمی', 'جواد اکبری', 'حسن موسوی',
+            'حسین کریمی', 'رضا محمدی', 'سعید نوری', 'علی حسینی',
+            'مجید کاظمی', 'مهدی رضایی', 'ناصر حیدری', 'یوسف مرادی',
+        ]
+        farmer_pages = self._listed_names(reverse('admin_people'), farmers)
+        self.assertEqual(len(farmer_pages), 2)
+        self.assertEqual(sum(len(page) for page in farmer_pages), len(farmers))
+        self.assertFalse(set.intersection(*farmer_pages))
+        worker_pages = self._listed_names(reverse('admin_people'), workers, {'role': 'worker'})
+        self.assertEqual(len(worker_pages), 2)
+        self.assertEqual(sum(len(page) for page in worker_pages), len(workers))
+        self.assertFalse(set.intersection(*worker_pages))
+        kept = self.client.get(reverse('admin_people'), {'role': 'worker', 'q': '0913'})
+        self.assertContains(kept, 'role=worker')
+        self.assertContains(kept, 'q=0913')
+        self.assertContains(kept, 'page=2')
+
+        farmer = User.objects.get(username='09121111111')
+        worker = User.objects.get(username='09130000001').worker
+        service = Service.objects.get(slug='wheat-harvest')
+        city = City.objects.get(name='مشهد')
+        created = timezone.now()
+        for index in range(11):
+            booking = Booking.objects.create(
+                farmer=farmer,
+                worker=worker,
+                service=service,
+                city=city,
+                address=f'نشانی‌یکتا-{index:02d}',
+                work_date=timezone.localdate() + timedelta(days=index + 1),
+            )
+            Booking.objects.filter(pk=booking.pk).update(created_at=created + timedelta(minutes=index))
+        first = self.client.get(reverse('admin_panel'))
+        self.assertContains(first, 'نشانی‌یکتا-10')
+        self.assertNotContains(first, 'نشانی‌یکتا-00')
+        self.assertContains(first, 'page=2')
+        second = self.client.get(reverse('admin_panel'), {'page': 2})
+        self.assertContains(second, 'نشانی‌یکتا-00')
+        self.assertNotContains(second, 'نشانی‌یکتا-10')
+        self.assertContains(second, 'قبلی')
+        awaiting = self.client.get(reverse('admin_panel'), {'status': 'awaiting'})
+        self.assertContains(awaiting, 'status=awaiting')
+        self.assertContains(awaiting, 'page=2')
+
+    def _listed_names(self, url, names, params=None):
+        pages = []
+        seen = set()
+        page = 1
+        while True:
+            query = dict(params or {})
+            query['page'] = page
+            response = self.client.get(url, query)
+            self.assertEqual(response.status_code, 200)
+            found = {name for name in names if name in response.content.decode()}
+            self.assertTrue(found)
+            self.assertFalse(found & seen)
+            pages.append(found)
+            seen |= found
+            if 'بعدی' not in response.content.decode():
+                break
+            page += 1
+            self.assertLessEqual(page, 5)
+        self.assertEqual(seen, set(names))
+        return pages
 
     @override_settings(
         MELIPAYAMAK_USERNAME='panel-user',

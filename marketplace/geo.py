@@ -1,3 +1,7 @@
+import json
+from functools import lru_cache
+from pathlib import Path
+
 CITY_CENTERS = {
     'مشهد': (36.2972, 59.6067),
     'نیشابور': (36.2140, 58.7960),
@@ -25,6 +29,37 @@ CITY_CENTERS = {
     'اراک': (34.0954, 49.7013),
     'سنندج': (35.3219, 46.9862),
 }
+
+
+OUTSIDE_IRAN = 'موقعیت انتخاب‌شده خارج از مرزهای ایران است.'
+_BORDER_PATH = Path(__file__).resolve().parent / 'data' / 'iran_border.json'
+
+
+@lru_cache(maxsize=1)
+def iran_border():
+    with _BORDER_PATH.open(encoding='utf-8') as handle:
+        return json.load(handle)
+
+
+def _ring_contains(lng, lat, ring):
+    inside = False
+    previous = ring[-1]
+    for point in ring:
+        lng_a, lat_a = previous
+        lng_b, lat_b = point
+        if (lat_a > lat) != (lat_b > lat) and lng < (lng_b - lng_a) * (lat - lat_a) / (lat_b - lat_a) + lng_a:
+            inside = not inside
+        previous = point
+    return inside
+
+
+def in_iran(lat, lng):
+    try:
+        lat = float(lat)
+        lng = float(lng)
+    except (TypeError, ValueError):
+        return False
+    return any(_ring_contains(lng, lat, ring) for ring in iran_border()['polygons'])
 
 
 def city_centers():

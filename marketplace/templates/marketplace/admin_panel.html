@@ -31,7 +31,7 @@
                 {{ booking.farmer.get_full_name }}
                 · {{ booking.worker.user.get_full_name }}
                 · {{ booking.city.name }}
-                · {{ booking.work_date|date:"Y/m/d"|fa_digits }}
+                · {{ booking.work_date|jalali }}
               </span>
             </span>
             <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold {{ booking.admin_status_classes }}">{{ booking.admin_status_label }}</span>
@@ -57,7 +57,7 @@
           {% if booking.confirmed_by %}
             <p class="mt-2 text-xs text-slate-400">
               {% if booking.admin_approved %}صلاحیت تأیید شد{% else %}صلاحیت رد شد{% endif %}
-              توسط {{ booking.confirmed_by.get_full_name }} در {{ booking.confirmed_at|date:"Y/m/d H:i"|fa_digits }}
+              توسط {{ booking.confirmed_by.get_full_name }} در {{ booking.confirmed_at|jalali:"Y/m/d H:i" }}
             </p>
           {% endif %}
           {% if booking.status == 'pending' and not booking.admin_approved %}

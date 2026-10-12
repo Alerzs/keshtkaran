@@ -30,12 +30,20 @@
       </div>
       <div>
         <label for="filter-city" class="mb-1 block text-xs font-semibold text-slate-500">شهر محل کار</label>
-        <select id="filter-city" name="city" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-          <option value="">همه شهرها</option>
-          {% for city in cities %}
-            <option value="{{ city.pk }}" {% if selected_city.pk == city.pk %}selected{% endif %}>{{ city.name }}</option>
-          {% endfor %}
-        </select>
+        {% if farm_locked %}
+          <input type="hidden" name="city" value="{{ selected_city.pk }}">
+          <select id="filter-city" disabled class="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm text-slate-500">
+            <option selected>{{ selected_city.name }}</option>
+          </select>
+          <p class="mt-1 text-[11px] leading-5 text-slate-400">شهر زمین در پروفایل ثبت شده و در این درخواست عوض نمی‌شود.</p>
+        {% else %}
+          <select id="filter-city" name="city" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+            <option value="">همه شهرها</option>
+            {% for city in cities %}
+              <option value="{{ city.pk }}" {% if selected_city.pk == city.pk %}selected{% endif %}>{{ city.name }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
       </div>
       <div>
         <label for="filter-sort" class="mb-1 block text-xs font-semibold text-slate-500">مرتب‌سازی</label>
@@ -55,7 +63,7 @@
         {% if selected_service %}حوزه «{{ selected_service.name }}»{% else %}همه حوزه‌ها{% endif %}
         {% if selected_city %} در {{ selected_city.name }}{% endif %}
         {% if address %} — آدرس زمین: {{ address }}{% endif %}
-        {% if work_date %} — تاریخ {{ work_date|fa_digits }}{% endif %}
+        {% if work_date %} — تاریخ {{ work_date|jalali }}{% endif %}
         <span class="mt-1 block font-semibold text-teal-700">{{ page_obj.paginator.count|fa_digits }} سرویس دهنده پیدا شد</span>
       </div>
     {% endif %}

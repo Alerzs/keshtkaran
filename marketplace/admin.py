@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.db import models
 
+from .dates import to_jalali
+from .forms import JalaliDateTimeWidget, JalaliDateWidget
 from .models import Booking, Category, City, Profile, Review, Service, User, WorkerProfile
 
 
@@ -38,11 +41,20 @@ class UserAdmin(DjangoUserAdmin):
         (None, {'fields': ('username', 'password')}),
         ('اطلاعات شخصی', {'fields': ('name', 'first_name', 'last_name', 'email')}),
         ('دسترسی‌ها', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('تاریخ‌ها', {'fields': ('last_login', 'date_joined')}),
+        ('تاریخ‌ها', {'fields': ('jalali_last_login', 'jalali_date_joined')}),
     )
     list_display = ('username', 'name', 'is_staff')
+    readonly_fields = ('jalali_last_login', 'jalali_date_joined')
     search_fields = ('username', 'name', 'first_name', 'last_name')
     inlines = [WorkerInline]
+
+    @admin.display(description='آخرین ورود')
+    def jalali_last_login(self, obj):
+        return to_jalali(obj.last_login, 'Y/m/d H:i') or '—'
+
+    @admin.display(description='تاریخ عضویت')
+    def jalali_date_joined(self, obj):
+        return to_jalali(obj.date_joined, 'Y/m/d H:i')
 
 
 @admin.register(Profile)
@@ -65,15 +77,34 @@ class WorkerProfileAdmin(admin.ModelAdmin):
         queryset.update(is_verified=True)
 
 
+class JalaliDateAdmin(admin.ModelAdmin):
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if type(db_field) is models.DateField:
+            kwargs['widget'] = JalaliDateWidget()
+            kwargs.setdefault('error_messages', {})['invalid'] = 'تاریخ جلالی معتبر نیست.'
+        elif type(db_field) is models.DateTimeField and not db_field.auto_now and not db_field.auto_now_add:
+            kwargs['widget'] = JalaliDateTimeWidget()
+            kwargs.setdefault('error_messages', {})['invalid'] = 'تاریخ جلالی معتبر نیست.'
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
+
+
 @admin.register(Booking)
-class BookingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'farmer', 'worker', 'service', 'city', 'work_date', 'status', 'admin_approved')
+class BookingAdmin(JalaliDateAdmin):
+    list_display = ('id', 'farmer', 'worker', 'service', 'city', 'jalali_work_date', 'status', 'admin_approved')
     list_filter = ('status', 'admin_approved', 'city', 'service')
     search_fields = ('address', 'farmer__username', 'farmer__name', 'worker__user__profile__phone')
 
+    @admin.display(description='تاریخ مراجعه', ordering='work_date')
+    def jalali_work_date(self, obj):
+        return to_jalali(obj.work_date)
+
 
 @admin.register(Review)
-class ReviewAdmin(admin.ModelAdmin):
-    list_display = ('farmer', 'worker', 'rating', 'created_at')
+class ReviewAdmin(JalaliDateAdmin):
+    list_display = ('farmer', 'worker', 'rating', 'jalali_created_at')
     list_filter = ('rating',)
     search_fields = ('farmer__name', 'farmer__username', 'comment')
+
+    @admin.display(description='تاریخ ثبت', ordering='created_at')
+    def jalali_created_at(self, obj):
+        return to_jalali(obj.created_at, 'Y/m/d H:i')

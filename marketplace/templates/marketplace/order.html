@@ -5,7 +5,11 @@
 <section class="border-b border-teal-100 bg-teal-50">
   <div class="mx-auto max-w-6xl px-4 py-8">
     <h1 class="text-2xl font-extrabold">درخواست {{ service.name }}</h1>
-    <p class="mt-2 text-sm text-slate-600">شهر و آدرس زمین را بنویسید تا سرویس دهندگان همین حوزه در همان منطقه پیشنهاد شوند.</p>
+    {% if farm_locked %}
+      <p class="mt-2 text-sm text-slate-600">شهر و آدرس از پروفایل زمین شما می‌آید و در این درخواست عوض نمی‌شود.</p>
+    {% else %}
+      <p class="mt-2 text-sm text-slate-600">شهر و آدرس زمین را بنویسید تا سرویس دهندگان همین حوزه در همان منطقه پیشنهاد شوند.</p>
+    {% endif %}
     <div class="mt-5">{% include "marketplace/partials/steps.html" with current=1 %}</div>
   </div>
 </section>

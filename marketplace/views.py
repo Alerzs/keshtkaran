@@ -14,7 +14,7 @@ from .forms import (
     AdminAccountForm, BookForm, FarmerProfileForm, LoginForm, OrderRequestForm, RegisterForm, ReviewForm,
     WorkerSettingsForm,
 )
-from .geo import city_centers
+from .geo import city_centers, iran_border
 from .models import Booking, Category, City, Profile, Review, Service, User, WorkerProfile
 from .sms import SmsError, send_account_sms
 
@@ -93,12 +93,16 @@ def order_service(request, slug):
         return redirect('admin_panel')
     service = get_object_or_404(Service.objects.select_related('category'), slug=slug)
     initial = {}
+    locked = None
     if profile and profile.role == Profile.FARMER:
-        if profile.farm_city_id:
-            initial['city'] = profile.farm_city_id
-        if profile.farm_address:
-            initial['address'] = profile.farm_address
-    form = OrderRequestForm(request.POST or None, initial=initial)
+        if profile.has_saved_farm:
+            locked = (profile.farm_city, profile.farm_address)
+        else:
+            if profile.farm_city_id:
+                initial['city'] = profile.farm_city_id
+            if profile.farm_address:
+                initial['address'] = profile.farm_address
+    form = OrderRequestForm(request.POST or None, initial=initial, locked_location=locked)
     if request.method == 'POST' and form.is_valid():
         data = form.cleaned_data
         query = urlencode({
@@ -110,7 +114,11 @@ def order_service(request, slug):
             'note': data['note'],
         })
         return redirect(f"{reverse('workers')}?{query}")
-    return render(request, 'marketplace/order.html', {'service': service, 'form': form})
+    return render(request, 'marketplace/order.html', {
+        'service': service,
+        'form': form,
+        'farm_locked': locked is not None,
+    })
 
 
 def _request_context(request):
@@ -152,6 +160,14 @@ def workers(request):
             | Q(services__name__icontains=ctx['q'])
             | Q(bio__icontains=ctx['q'])
         )
+    profile = getattr(request.user, 'profile', None) if request.user.is_authenticated else None
+    farm_locked = bool(
+        profile and profile.role == Profile.FARMER and profile.has_saved_farm and ctx['address']
+    )
+    if farm_locked:
+        ctx['selected_city'] = profile.farm_city
+        ctx['address'] = profile.farm_address.strip()
+    ctx['farm_locked'] = farm_locked
     if ctx['selected_city']:
         qs = qs.filter(cities=ctx['selected_city'])
 
@@ -206,10 +222,14 @@ def _book_initial(request, worker):
     if request.GET.get('note'):
         initial['note'] = request.GET.get('note')
     profile = request.user.profile
-    if 'city' not in initial and profile.farm_city_id and worker.cities.filter(pk=profile.farm_city_id).exists():
+    if profile.has_saved_farm:
         initial['city'] = profile.farm_city_id
-    if 'address' not in initial and profile.farm_address:
-        initial['address'] = profile.farm_address
+        initial['address'] = profile.farm_address.strip()
+    else:
+        if 'city' not in initial and profile.farm_city_id and worker.cities.filter(pk=profile.farm_city_id).exists():
+            initial['city'] = profile.farm_city_id
+        if 'address' not in initial and profile.farm_address:
+            initial['address'] = profile.farm_address
     return initial
 
 
@@ -229,15 +249,21 @@ def book(request, pk):
         messages.error(request, 'پروفایل این سرویس دهنده هنوز کامل نشده است.')
         return redirect('workers')
 
+    profile = request.user.profile
+    locked = (profile.farm_city, profile.farm_address) if profile.has_saved_farm else None
     if request.method == 'POST':
-        form = BookForm(request.POST, worker=worker)
+        form = BookForm(request.POST, worker=worker, locked_location=locked)
         if form.is_valid():
             booking = form.save(request.user)
             messages.success(request, 'درخواست رزرو ثبت شد.')
             return redirect('bookings')
     else:
-        form = BookForm(worker=worker, initial=_book_initial(request, worker))
-    return render(request, 'marketplace/book.html', {'worker': worker, 'form': form})
+        form = BookForm(worker=worker, initial=_book_initial(request, worker), locked_location=locked)
+    return render(request, 'marketplace/book.html', {
+        'worker': worker,
+        'form': form,
+        'farm_locked': locked is not None,
+    })
 
 
 def _farmer_stage_options():
@@ -395,7 +421,11 @@ def farmer_profile(request):
         'form': form,
         'profile': profile,
         'city_centers': city_centers(),
+        'iran_border': iran_border(),
     })
+
+
+ADMIN_PAGE_SIZE = 10
 
 
 @role_required(Profile.ADMIN)
@@ -416,7 +446,7 @@ def admin_panel(request):
         jobs = jobs.filter(status=Booking.PENDING, admin_approved=True)
     elif selected:
         jobs = jobs.filter(status=selected)
-    page_obj = Paginator(jobs, 10).get_page(request.GET.get('page'))
+    page_obj = Paginator(jobs, ADMIN_PAGE_SIZE).get_page(request.GET.get('page'))
     counts = {row['status']: row['total'] for row in Booking.objects.values('status').annotate(total=Count('id'))}
     awaiting = Booking.objects.filter(status=Booking.PENDING, admin_approved=False).count()
     pending_ready = counts.get(Booking.PENDING, 0) - awaiting
@@ -475,11 +505,11 @@ def admin_people(request):
         query,
         'user__profile__phone',
     )
+    people = workers if selected == Profile.WORKER else farmers
     return render(request, 'marketplace/admin_people.html', {
         'selected': selected,
         'query': query,
-        'farmers': farmers,
-        'workers': workers,
+        'page_obj': Paginator(people, ADMIN_PAGE_SIZE).get_page(request.GET.get('page')),
         'farmer_count': farmers.count(),
         'worker_count': workers.count(),
     })
@@ -511,6 +541,7 @@ def admin_create_account(request):
         'selected_services': form.selected_pks('services'),
         'selected_cities': form.selected_pks('cities'),
         'city_centers': city_centers(),
+        'iran_border': iran_border(),
     })
 
 

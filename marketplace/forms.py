@@ -9,6 +9,14 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from .dates import (
+    JALALI_MONTHS,
+    fa_digits,
+    gregorian_from_jalali,
+    jalali_parts,
+    jalali_year_span,
+)
+from .geo import OUTSIDE_IRAN, in_iran
 from .models import Booking, City, Profile, Service, WorkerProfile
 from .utils import normalize_phone
 
@@ -29,6 +37,123 @@ _PASSWORD_TOGGLE = mark_safe(
     '</svg>'
     '</button>'
 )
+
+
+class JalaliDateWidget(forms.MultiWidget):
+    template_name = 'marketplace/widgets/jalali_date.html'
+
+    def id_for_label(self, id_):
+        return f'{id_}_0' if id_ else ''
+
+    def __init__(self, attrs=None):
+        widgets = [forms.Select() for _ in range(3)]
+        super().__init__(widgets, attrs)
+
+    def get_context(self, name, value, attrs):
+        self._fill_choices(self._selected_year(value))
+        return super().get_context(name, value, attrs)
+
+    def _selected_year(self, value):
+        if isinstance(value, (list, tuple)):
+            return value[0] if value else None
+        restored = _restore_invalid(value, 3)
+        if restored is not None:
+            return restored[0]
+        try:
+            parts = jalali_parts(value)
+        except (TypeError, ValueError):
+            return None
+        return parts[0] if parts else None
+
+    def decompress(self, value):
+        restored = _restore_invalid(value, 3)
+        if restored is not None:
+            return restored
+        if not value:
+            return [None, None, None]
+        try:
+            parts = jalali_parts(value)
+        except (TypeError, ValueError):
+            return [None, None, None]
+        if not parts:
+            return [None, None, None]
+        return list(parts[:3])
+
+    def value_from_datadict(self, data, files, name):
+        return _jalali_from_datadict(data, name, 3)
+
+    def _fill_choices(self, selected_year):
+        self.widgets[0].choices = [('', 'سال')] + [
+            (str(year), fa_digits(year)) for year in jalali_year_span(selected_year)
+        ]
+        self.widgets[1].choices = [('', 'ماه')] + [
+            (str(month), name) for month, name in enumerate(JALALI_MONTHS) if month
+        ]
+        self.widgets[2].choices = [('', 'روز')] + [
+            (str(day), fa_digits(day)) for day in range(1, 32)
+        ]
+        for widget, label in zip(self.widgets, ('سال', 'ماه', 'روز')):
+            widget.attrs['aria-label'] = label
+
+
+class JalaliDateTimeWidget(JalaliDateWidget):
+    def __init__(self, attrs=None):
+        forms.MultiWidget.__init__(self, [forms.Select() for _ in range(5)], attrs)
+
+    def decompress(self, value):
+        restored = _restore_invalid(value, 5)
+        if restored is not None:
+            return restored
+        if not value:
+            return [None, None, None, None, None]
+        try:
+            parts = jalali_parts(value)
+        except (TypeError, ValueError):
+            return [None, None, None, None, None]
+        if not parts:
+            return [None, None, None, None, None]
+        if len(parts) == 3:
+            return [*parts, '0', '0']
+        return list(parts)
+
+    def value_from_datadict(self, data, files, name):
+        return _jalali_from_datadict(data, name, 5, with_time=True)
+
+    def _fill_choices(self, selected_year):
+        super()._fill_choices(selected_year)
+        self.widgets[3].choices = [('', 'ساعت')] + [
+            (str(hour), fa_digits(f'{hour:02d}')) for hour in range(24)
+        ]
+        self.widgets[4].choices = [('', 'دقیقه')] + [
+            (str(minute), fa_digits(f'{minute:02d}')) for minute in range(60)
+        ]
+        self.widgets[3].attrs['aria-label'] = 'ساعت'
+        self.widgets[4].attrs['aria-label'] = 'دقیقه'
+
+
+def _restore_invalid(value, count):
+    if not isinstance(value, str) or not value.startswith('invalid:'):
+        return None
+    bits = value.split(':')[1:]
+    bits = (bits + [''] * count)[:count]
+    return [bit or None for bit in bits]
+
+
+def _jalali_from_datadict(data, name, count, with_time=False):
+    parts = [data.get(f'{name}_{index}') for index in range(count)]
+    if any(part not in (None, '') for part in parts):
+        token = 'invalid:' + ':'.join(part or '' for part in parts)
+        if not all(part not in (None, '') for part in parts):
+            return token
+        if with_time:
+            gregorian = gregorian_from_jalali(*parts[:3], hour=parts[3], minute=parts[4])
+            return gregorian.isoformat() if gregorian else token
+        gregorian = gregorian_from_jalali(*parts[:3])
+        return gregorian.isoformat() if gregorian else token
+    single = data.get(name)
+    if single not in (None, ''):
+        return single
+    return None
 
 
 class PasswordToggleInput(forms.PasswordInput):
@@ -203,10 +328,8 @@ class AdminAccountForm(forms.Form):
         if lat is None or lng is None:
             self.add_error(None, 'برای ثبت موقعیت روی نقشه، عرض و طول جغرافیایی را با هم مشخص کنید.')
             return
-        if lat < Decimal('24') or lat > Decimal('40'):
-            self.add_error('farm_latitude', 'عرض جغرافیایی باید داخل محدوده ایران باشد.')
-        if lng < Decimal('44') or lng > Decimal('64'):
-            self.add_error('farm_longitude', 'طول جغرافیایی باید داخل محدوده ایران باشد.')
+        if not in_iran(lat, lng):
+            self.add_error('farm_latitude', OUTSIDE_IRAN)
 
     @transaction.atomic
     def save(self):
@@ -262,25 +385,39 @@ class OrderRequestForm(forms.Form):
     address = forms.CharField(label='آدرس دقیق زمین', max_length=255)
     work_date = forms.DateField(
         label='تاریخ مراجعه',
-        widget=forms.DateInput(attrs={'type': 'date'}),
-        error_messages={'invalid': 'تاریخ معتبر نیست.'},
+        widget=JalaliDateWidget(),
+        error_messages={'invalid': 'تاریخ جلالی معتبر نیست.'},
     )
     land_area = forms.DecimalField(
         label='مساحت زمین (هکتار)', required=False, min_value=0, max_value=10000, decimal_places=2,
     )
     note = forms.CharField(label='توضیح کار', required=False, widget=forms.Textarea(attrs={'rows': 4}), max_length=500)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, locked_location=None, **kwargs):
+        self.locked_location = None
+        if locked_location:
+            city, address = locked_location
+            address = address.strip()
+            self.locked_location = (city, address)
+            initial = dict(kwargs.get('initial') or {})
+            initial['city'] = city.pk
+            initial['address'] = address
+            kwargs['initial'] = initial
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
             field.widget.attrs['class'] = INPUT_CLASS
-        self.fields['work_date'].widget.attrs.update({
-            'dir': 'ltr',
-            'min': timezone.localdate().isoformat(),
-        })
         self.fields['land_area'].widget.attrs.update({'dir': 'ltr', 'placeholder': 'مثلاً ۲.۵', 'step': '0.1'})
         self.fields['address'].widget.attrs['placeholder'] = 'روستا، جاده، نام قطعه یا نشانه محلی'
         self.fields['note'].widget.attrs['placeholder'] = 'نوع محصول، ساعت حضور، ابزار موردنیاز...'
+        if self.locked_location:
+            city, _address = self.locked_location
+            self.fields['city'].queryset = City.objects.filter(pk=city.pk)
+            self.fields['city'].empty_label = None
+            self.fields['city'].disabled = True
+            self.fields['address'].disabled = True
+            for name in ('city', 'address'):
+                css = self.fields[name].widget.attrs['class'].replace('bg-slate-50', 'cursor-not-allowed bg-slate-100 text-slate-500')
+                self.fields[name].widget.attrs['class'] = css
 
     def clean_address(self):
         address = self.cleaned_data['address'].strip()
@@ -302,7 +439,11 @@ class BookForm(OrderRequestForm):
         self.worker = worker
         super().__init__(*args, **kwargs)
         self.fields['service'].queryset = worker.services.all()
-        self.fields['city'].queryset = worker.cities.all()
+        if self.locked_location:
+            city, _address = self.locked_location
+            self.fields['city'].queryset = City.objects.filter(pk=city.pk)
+        else:
+            self.fields['city'].queryset = worker.cities.all()
         self.fields['service'].widget.attrs['class'] = INPUT_CLASS
         self.order_fields(['service', 'city', 'address', 'work_date', 'land_area', 'note'])
 
